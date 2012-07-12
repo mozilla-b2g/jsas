@@ -21,7 +21,7 @@
   else
     root.ActiveSync = factory(WBXML, ASCP);
 }(this, function(WBXML, ASCP) {
-  const __exports__ = ["autodiscover", "options", "doCommand"];
+  const __exports__ = ["Connection"];
 
   function nsResolver(prefix) {
     const baseUrl = "http://schemas.microsoft.com/exchange/autodiscover/";
@@ -32,131 +32,142 @@
     return ns[prefix] || null;
   }
 
-  function autodiscover(aEmail, aPassword, aCallback) {
-    // TODO: we need to be smarter here and do some stuff with redirects and
-    // other fun stuff, but this works for hotmail, so yay.
+  function Connection(aEmail, aPassword, aCallback) {
+    this.autodiscover(aEmail, aPassword, aCallback);
+  }
 
-    let xhr = new XMLHttpRequest({mozSystem: true});
-    xhr.open("POST", "https://m.hotmail.com/autodiscover/autodiscover.xml",
-             true, aEmail, aPassword);
-    xhr.onload = function() {
-      if (typeof logXhr == "function") // TODO: remove this debug code
-        logXhr(xhr);
+  Connection.prototype = {
+    autodiscover: function(aEmail, aPassword, aCallback) {
+      // TODO: we need to be smarter here and do some stuff with redirects and
+      // other fun stuff, but this works for hotmail, so yay.
 
-      let doc = new DOMParser().parseFromString(xhr.responseText, "text/xml");
-      let getString = function(xpath, rel) {
-        return doc.evaluate(xpath, rel, nsResolver, XPathResult.STRING_TYPE,
-                            null).stringValue;
-      };
+      let conn = this;
 
-      let error = doc.evaluate(
-        "/ad:Autodiscover/ms:Response/ms:Error", doc, nsResolver,
-        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-      if (error) {
-        aCallback({
-          "error": {
-            "message": getString("ms:Message/text()", error),
-          }
-        });
-      }
-      else {
-        let user = doc.evaluate(
-          "/ad:Autodiscover/ms:Response/ms:User", doc, nsResolver,
-          XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-        let server = doc.evaluate(
-          "/ad:Autodiscover/ms:Response/ms:Action/ms:Settings/ms:Server", doc,
-          nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-          .singleNodeValue;
+      let xhr = new XMLHttpRequest({mozSystem: true});
+      xhr.open("POST", "https://m.hotmail.com/autodiscover/autodiscover.xml",
+               true, aEmail, aPassword);
+      xhr.onload = function() {
+        if (typeof logXhr == "function") // TODO: remove this debug code
+          logXhr(xhr);
 
-        let result = {
-          "user": {
-            "name":  getString("ms:DisplayName/text()",  user),
-            "email": getString("ms:EMailAddress/text()", user),
-          },
-          "server": {
-            "type": getString("ms:Type/text()", server),
-            "url":  getString("ms:Url/text()",  server),
-            "name": getString("ms:Name/text()", server),
-          }
+        let doc = new DOMParser().parseFromString(xhr.responseText, "text/xml");
+        let getString = function(xpath, rel) {
+          return doc.evaluate(xpath, rel, nsResolver, XPathResult.STRING_TYPE,
+                              null).stringValue;
         };
 
-        options(result.server.url, function(aSubResult) {
-          result.options = aSubResult;
-          aCallback(result);
-        });
-      }
-    };
+        let error = doc.evaluate(
+          "/ad:Autodiscover/ms:Response/ms:Error", doc, nsResolver,
+          XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        if (error) {
+          aCallback({
+            "error": {
+              "message": getString("ms:Message/text()", error),
+            }
+          });
+        }
+        else {
+          let user = doc.evaluate(
+            "/ad:Autodiscover/ms:Response/ms:User", doc, nsResolver,
+            XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+          let server = doc.evaluate(
+            "/ad:Autodiscover/ms:Response/ms:Action/ms:Settings/ms:Server", doc,
+            nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+            .singleNodeValue;
 
-    // TODO: use something like http://ejohn.org/blog/javascript-micro-templating/
-    // here?
-    let postdata =
-    '<?xml version="1.0" encoding="utf-8"?>\n' +
-    '<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/mobilesync/requestschema/2006">\n' +
-    '  <Request>\n' +
-    '    <EMailAddress>' + aEmail + '</EMailAddress>\n' +
-    '      <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006</AcceptableResponseSchema>\n' +
-    '  </Request>\n' +
-    '</Autodiscover>';
+          let result = {
+            "user": {
+              "name":  getString("ms:DisplayName/text()",  user),
+              "email": getString("ms:EMailAddress/text()", user),
+            },
+            "server": {
+              "type": getString("ms:Type/text()", server),
+              "url":  getString("ms:Url/text()",  server),
+              "name": getString("ms:Name/text()", server),
+            }
+          };
 
-    xhr.setRequestHeader("Content-Type", "text/xml");
-    xhr.send(postdata);
-  }
-
-  function options(aHost, aCallback) {
-    let xhr = new XMLHttpRequest({mozSystem: true});
-    xhr.open("OPTIONS", aHost + "/Microsoft-Server-ActiveSync", true);
-    xhr.onload = function() {
-      if (typeof logXhr == "function") // TODO: remove this debug code
-        logXhr(xhr);
-
-      let result = {
-        "versions": xhr.getResponseHeader("MS-ASProtocolVersions").split(","),
-        "commands": xhr.getResponseHeader("MS-ASProtocolCommands").split(","),
+          conn.baseURL = result.server.url + "/Microsoft-Server-ActiveSync";
+          conn.options(conn.baseURL, function(aSubResult) {
+            result.options = aSubResult;
+            aCallback.call(conn, result);
+          });
+        }
       };
-      aCallback(result);
-    };
 
-    xhr.send();
-  }
+      // TODO: use something like
+      // http://ejohn.org/blog/javascript-micro-templating/ here?
+      let postdata =
+      '<?xml version="1.0" encoding="utf-8"?>\n' +
+      '<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/mobilesync/requestschema/2006">\n' +
+      '  <Request>\n' +
+      '    <EMailAddress>' + aEmail + '</EMailAddress>\n' +
+      '      <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006</AcceptableResponseSchema>\n' +
+      '  </Request>\n' +
+      '</Autodiscover>';
 
-  function doCommand(aBaseUrl, aXml, aCallback) {
-    let r = new WBXML.Reader(aXml, ASCP);
-    let command = r.document.next().localTagName;
-    let xhr = new XMLHttpRequest({mozSystem: true});
-    xhr.open("POST", aBaseUrl + "?Cmd=" + command + "&User="+"gaia-eas-test"+
-             "&DeviceId=v140Device&DeviceType=SmartPhone", true, email,
-             password);
-    xhr.setRequestHeader("MS-ASProtocolVersion", "14.0");
-    xhr.setRequestHeader("Content-Type", "application/vnd.ms-sync.wbxml");
-    xhr.setRequestHeader("User-Agent", "B2G");
+      xhr.setRequestHeader("Content-Type", "text/xml");
+      xhr.send(postdata);
+    },
 
-    xhr.onload = function() {
-      if (typeof logXhr == "function") // TODO: remove this debug code
-        logXhr(xhr);
+    options: function(aURL, aCallback) {
+      let xhr = new XMLHttpRequest({mozSystem: true});
+      xhr.open("OPTIONS", aURL, true);
+      xhr.onload = function() {
+        if (typeof logXhr == "function") // TODO: remove this debug code
+          logXhr(xhr);
 
-      if (xhr.status == 451) {
-        let newBaseUrl = xhr.getResponseHeader("X-MS-Location")
-        doCommand(newBaseUrl, aXml, aCallback);
-        return;
-      }
-      if (xhr.status != 200) {
-        if (typeof print == "function") // TODO: remove this debug code
-          print("Error!\n");
-        return;
-      }
+        let result = {
+          "versions": xhr.getResponseHeader("MS-ASProtocolVersions").split(","),
+          "commands": xhr.getResponseHeader("MS-ASProtocolCommands").split(","),
+        };
+        aCallback(result);
+      };
 
-      let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-      if (typeof log == "function") { // TODO: remove this debug code
-        log(r.dump());
-        r.rewind();
-      }
+      xhr.send();
+    },
 
-      aCallback(r);
-    };
+    doCommand: function(aXml, aCallback) {
+      let r = new WBXML.Reader(aXml, ASCP);
+      let command = r.document.next().localTagName;
+      let xhr = new XMLHttpRequest({mozSystem: true});
+      xhr.open("POST", this.baseURL + "?Cmd=" + command + "&User=" +
+               "gaia-eas-test" + // TODO: fixme
+               "&DeviceId=v140Device&DeviceType=SmartPhone", true, email,
+               password);
+      xhr.setRequestHeader("MS-ASProtocolVersion", "14.0");
+      xhr.setRequestHeader("Content-Type", "application/vnd.ms-sync.wbxml");
+      xhr.setRequestHeader("User-Agent", "B2G");
 
-    xhr.responseType = "arraybuffer";
-    xhr.send(aXml.buffer);
-  }
+      let conn = this;
+      xhr.onload = function() {
+        if (typeof logXhr == "function") // TODO: remove this debug code
+          logXhr(xhr);
+
+        if (xhr.status == 451) {
+          conn.baseURL = xhr.getResponseHeader("X-MS-Location");
+          conn.doCommand(aXml, aCallback);
+          return;
+        }
+        if (xhr.status != 200) {
+          if (typeof print == "function") // TODO: remove this debug code
+            print("Error!\n");
+          return;
+        }
+
+        let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
+        if (typeof log == "function") { // TODO: remove this debug code
+          log(r.dump());
+          r.rewind();
+        }
+
+        aCallback(r);
+      };
+
+      xhr.responseType = "arraybuffer";
+      xhr.send(aXml.buffer);
+    },
+  };
 
   let exported = {};
   for (let [,exp] in Iterator(__exports__))

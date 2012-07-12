@@ -35,17 +35,17 @@ function logXhr(xhr) {
 
 window.addEventListener("load", function() {
   print("Starting up...\n");
-  ActiveSync.autodiscover(email, password, function(aResult) {
+
+  let conn = new ActiveSync.Connection(email, password, function(aResult) {
     print(JSON.stringify(aResult, null, 2)+"\n\n");
 
-    let baseUrl = aResult.server.url + "/Microsoft-Server-ActiveSync";
     let fh = ASCP.FolderHierarchy.Tags;
     let w = new WBXML.Writer("1.3", 1, 106 /* UTF-8 */);
     w.stag(fh.FolderSync)
        .tag(fh.SyncKey, "0")
      .etag();
 
-    ActiveSync.doCommand(baseUrl, w, function(aResponse) {
+    this.doCommand(w, function(aResponse) {
       let next = false;
       let fh = ASCP.FolderHierarchy.Tags;
       for (let node in aResponse.document) {
