@@ -1,0 +1,3 @@
+[submodule "wbxml"]
+	path = wbxml
+	url = https://github.com/mozsquib/jswbxml.git
