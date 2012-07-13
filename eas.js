@@ -33,11 +33,13 @@
   }
 
   function Connection(aEmail, aPassword, aCallback) {
-    this.autodiscover(aEmail, aPassword, aCallback);
+    this._email = aEmail;
+    this._password = aPassword;
+    this.autodiscover(aCallback);
   }
 
   Connection.prototype = {
-    autodiscover: function(aEmail, aPassword, aCallback) {
+    autodiscover: function(aCallback) {
       // TODO: we need to be smarter here and do some stuff with redirects and
       // other fun stuff, but this works for hotmail, so yay.
 
@@ -45,7 +47,7 @@
 
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open("POST", "https://m.hotmail.com/autodiscover/autodiscover.xml",
-               true, aEmail, aPassword);
+               true, this._email, this._password);
       xhr.onload = function() {
         if (typeof logXhr == "function") // TODO: remove this debug code
           logXhr(xhr);
@@ -101,7 +103,7 @@
       '<?xml version="1.0" encoding="utf-8"?>\n' +
       '<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/mobilesync/requestschema/2006">\n' +
       '  <Request>\n' +
-      '    <EMailAddress>' + aEmail + '</EMailAddress>\n' +
+      '    <EMailAddress>' + this._email + '</EMailAddress>\n' +
       '      <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006</AcceptableResponseSchema>\n' +
       '  </Request>\n' +
       '</Autodiscover>';
@@ -132,9 +134,8 @@
       let command = r.document.next().localTagName;
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open("POST", this.baseURL + "?Cmd=" + command + "&User=" +
-               "gaia-eas-test" + // TODO: fixme
-               "&DeviceId=v140Device&DeviceType=SmartPhone", true, email,
-               password);
+               this._email + "&DeviceId=v140Device&DeviceType=SmartPhone",
+               true, this._email, this._password);
       xhr.setRequestHeader("MS-ASProtocolVersion", "14.0");
       xhr.setRequestHeader("Content-Type", "application/vnd.ms-sync.wbxml");
       xhr.setRequestHeader("User-Agent", "B2G");
