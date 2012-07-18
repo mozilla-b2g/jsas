@@ -19,7 +19,7 @@
   else if (typeof define === "function" && define.amd)
     define(["wbxml"], factory);
   else
-    root.ASCP = factory(WBXML);
+    root.ActiveSyncProtocol = factory(WBXML);
 }(this, function(WBXML) {
   let codepages = {
     AirSync: {

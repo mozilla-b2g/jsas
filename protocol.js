@@ -15,11 +15,11 @@
 
 (function (root, factory) {
   if (typeof exports === "object")
-    module.exports = factory(require("wbxml"), require("ascp"));
+    module.exports = factory(require("wbxml"), require("activesync/codepages"));
   else if (typeof define === "function" && define.amd)
-    define(["wbxml", "ascp"], factory);
+    define(["wbxml", "activesync/codepages"], factory);
   else
-    root.ActiveSync = factory(WBXML, ASCP);
+    root.ActiveSyncProtocol = factory(WBXML, ActiveSyncCodepages);
 }(this, function(WBXML, ASCP) {
   const __exports__ = ["Connection"];
 
