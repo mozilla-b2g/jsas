@@ -137,9 +137,9 @@ function test_activesync_example() {
     0x03, 0x31, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
   ]);
 
-  let as = ActiveSync.AirSync.Tags;
-  let asb = ActiveSync.AirSyncBase.Tags;
-  let c = ActiveSync.Contacts.Tags;
+  let as = ActiveSyncCodepages.AirSync.Tags;
+  let asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  let c = ActiveSyncCodepages.Contacts.Tags;
   let expectedNodes = [
     { type: "STAG", tag: as.Sync, localTagName: "Sync" },
       { type: "STAG", tag: as.Collections, localTagName: "Collections" },
@@ -194,7 +194,7 @@ function test_activesync_example() {
     { type: "ETAG" },
   ];
 
-  let r = new WBXML.Reader(data, ActiveSync);
+  let r = new WBXML.Reader(data, ActiveSyncCodepages);
   verify_wbxml(r, "1.3", 1, "UTF-8", expectedNodes);
 }
 

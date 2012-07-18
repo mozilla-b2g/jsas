@@ -36,27 +36,28 @@ function logXhr(xhr) {
 window.addEventListener("load", function() {
   print("Starting up...\n");
 
-  let conn = new ActiveSync.Connection(email, password, function(aResult) {
-    print(JSON.stringify(aResult, null, 2)+"\n\n");
+  let conn = new ActiveSyncProtocol.Connection(
+    email, password, function(aResult) {
+      print(JSON.stringify(aResult, null, 2)+"\n\n");
 
-    let fh = ASCP.FolderHierarchy.Tags;
-    let w = new WBXML.Writer("1.3", 1, 106 /* UTF-8 */);
-    w.stag(fh.FolderSync)
-       .tag(fh.SyncKey, "0")
-     .etag();
+      let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
+      let w = new WBXML.Writer("1.3", 1, 106 /* UTF-8 */);
+      w.stag(fh.FolderSync)
+         .tag(fh.SyncKey, "0")
+       .etag();
 
-    this.doCommand(w, function(aResponse) {
-      let next = false;
-      let fh = ASCP.FolderHierarchy.Tags;
-      for (let node in aResponse.document) {
-        if (next) {
-          print(node.textContent+"\n");
-          next = false;
+      this.doCommand(w, function(aResponse) {
+        let next = false;
+        let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
+        for (let node in aResponse.document) {
+          if (next) {
+            print(node.textContent+"\n");
+            next = false;
+          }
+          else if (node.type == "STAG" && node.tag == fh.DisplayName) {
+            next = true;
+          }
         }
-        else if (node.type == "STAG" && node.tag == fh.DisplayName) {
-          next = true;
-        }
-      }
+      });
     });
-  });
 }, false);
