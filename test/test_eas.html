@@ -33,11 +33,31 @@
         white-space: pre-wrap;
         margin-bottom: 1em;
       }
+      .folder {
+        color: blue;
+        cursor: pointer;
+      }
+
+      #content {
+        display: table;
+        width: 100%;
+      }
+      #folders {
+        display: table-cell;
+        border: 1px solid gray;
+        width: 20%;
+      }
+      #messages {
+        display: table-cell;
+        border: 1px solid gray;
+      }
     </style>
   </head>
   <body>
-    Messages
-    <div id="messages" class="output"></div>
+    <div id="content">
+      <div id="folders"></div>
+      <div id="messages"></div>
+    </div>
     Log
     <div id="log" class="output"></div>
   </body>
