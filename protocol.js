@@ -156,7 +156,6 @@
       xhr.setRequestHeader("User-Agent", "B2G");
       xhr.setRequestHeader("Authorization", this._getAuth());
 
-
       let conn = this;
       xhr.onload = function() {
         if (typeof logXhr == "function") // TODO: remove this debug code
@@ -173,13 +172,18 @@
           return;
         }
 
-        let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-        if (typeof log == "function") { // TODO: remove this debug code
-          log(r.dump());
-          r.rewind();
+        if (xhr.response.byteLength == 0) {
+          aCallback(null);
         }
+        else {
+          let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
+          if (typeof log == "function") { // TODO: remove this debug code
+            log(r.dump());
+            r.rewind();
+          }
 
-        aCallback(r);
+          aCallback(r);
+        }
       };
 
       xhr.responseType = "arraybuffer";
