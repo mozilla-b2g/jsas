@@ -42,47 +42,32 @@ window.addEventListener('load', function() {
 
   conn.doCommand(w, function(aResponse) {
     let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
-    let get_simple_node = function() {
-      let stag = aResponse.document.next();
-      if (stag.type != 'STAG')
-        throw new Error('expected STAG node');
-
-      let text = aResponse.document.next();
-      if (text.type != 'TEXT')
-        throw new Error('expected TEXT node');
-
-      if (aResponse.document.next().type != 'ETAG')
-        throw new Error('expected ETAG node');
-
-      return [stag.localTagName, text.textContent];
-    };
-
     let foldersNode = document.getElementById('folders');
-    for (let node in aResponse.document) {
-      if (node.type == 'STAG' && node.tag == fh.Add) {
-        let folderData = {};
-        for (let i = 0; i < 4; i++) {
-          let [key, value] = get_simple_node();
-          folderData[key] = value;
-        }
-        if (aResponse.document.next().type != 'ETAG')
-          throw new Error('expected ETAG node');
 
-        let row = document.createElement('div');
-        row.className = 'folder';
-        row.textContent = folderData.DisplayName;
-        row.addEventListener('click', function() {
-          getMessages(folderData);
-        }, false);
-        foldersNode.appendChild(row);
-      }
-    }
+    let e = new WBXML.EventParser();
+
+    e.addEventListener([fh.FolderSync, fh.Changes, fh.Add], function(node) {
+      let folderData = {};
+      for (let [,child] in Iterator(node.children))
+        folderData[child.localTagName] = child.children[0].textContent;
+
+      let row = document.createElement('div');
+      row.className = 'folder';
+      row.textContent = folderData.DisplayName;
+      row.addEventListener('click', function() {
+        getMessages(folderData);
+      }, false);
+      foldersNode.appendChild(row);
+    });
+
+    e.run(aResponse);
   });
 }, false);
 
 function getMessages(folderData) {
   let messagesNode = document.getElementById('messages');
-  messagesNode.innerHTML = '';
+  while (messagesNode.lastChild)
+    messagesNode.removeChild(messagesNode.lastChild);
 
   let folderName = document.createElement('h1');
   folderName.textContent = folderData.DisplayName;
@@ -103,19 +88,12 @@ function getMessages(folderData) {
 
   conn.doCommand(w, function(aResponse) {
     let syncKey;
-
-    for (let node in aResponse.document) {
-      if (node.type == 'STAG' && node.tag == as.SyncKey) {
-          let text = aResponse.document.next();
-          if (text.type != 'TEXT')
-            throw new Error('expected TEXT node');
-
-          if (aResponse.document.next().type != 'ETAG')
-            throw new Error('expected ETAG node');
-
-        syncKey = text.textContent;
-      }
-    }
+    let e = new WBXML.EventParser();
+    e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
+                       function(node) {
+      syncKey = node.children[0].textContent;
+    });
+    e.run(aResponse);
 
     let w = new WBXML.Writer('1.3', 1, 'UTF-8');
     w.stag(as.Sync)
@@ -123,26 +101,35 @@ function getMessages(folderData) {
          .stag(as.Collection)
            .tag(as.SyncKey, syncKey)
            .tag(as.CollectionId, folderData.ServerId)
-           .tag(as.GetChanges)
          .etag()
        .etag()
      .etag();
 
     conn.doCommand(w, function(aResponse) {
-      for (let node in aResponse.document) {
-        if (node.type == 'STAG' && node.tag == em.Subject) {
-          let text = aResponse.document.next();
-          if (text.type != 'TEXT')
-            throw new Error('expected TEXT node');
+      let e = new WBXML.EventParser();
+      e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
+                         function(node) {
+        syncKey = node.children[0].textContent;
+      });
+      e.addEventListener([as.Sync, as.Collections, as.Collection, as.Commands,
+                          as.Add, as.ApplicationData],
+                         function(node) {
+        let headers = {};
 
-          if (aResponse.document.next().type != 'ETAG')
-            throw new Error('expected ETAG node');
+        for (let [,child] in Iterator(node.children)) {
+          let childText = child.children.length &&
+                          child.children[0].textContent;
 
-          let message = document.createElement('div');
-          message.textContent = text.textContent;
-          messagesNode.appendChild(message);
+          if (child.tag == em.Subject)
+            headers.subject = childText;
         }
-      }
+
+        let message = document.createElement('div');
+        message.textContent = headers.subject;
+        messagesNode.appendChild(message);
+      });
+
+      e.run(aResponse);
     });
   });
 }
