@@ -14,13 +14,15 @@
  */
 
 (function (root, factory) {
-  if (typeof exports === "object")
-    module.exports = factory(require("wbxml"));
-  else if (typeof define === "function" && define.amd)
-    define(["wbxml"], factory);
+  if (typeof exports === 'object')
+    module.exports = factory(require('wbxml'));
+  else if (typeof define === 'function' && define.amd)
+    define(['wbxml'], factory);
   else
     root.ActiveSyncCodepages = factory(WBXML);
 }(this, function(WBXML) {
+  'use strict';
+
   let codepages = {
     AirSync: {
       Tags: {

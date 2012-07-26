@@ -14,20 +14,22 @@
  */
 
 (function (root, factory) {
-  if (typeof exports === "object")
-    module.exports = factory(require("wbxml"), require("activesync/codepages"));
-  else if (typeof define === "function" && define.amd)
-    define(["wbxml", "activesync/codepages"], factory);
+  if (typeof exports === 'object')
+    module.exports = factory(require('wbxml'), require('activesync/codepages'));
+  else if (typeof define === 'function' && define.amd)
+    define(['wbxml', 'activesync/codepages'], factory);
   else
     root.ActiveSyncProtocol = factory(WBXML, ActiveSyncCodepages);
 }(this, function(WBXML, ASCP) {
-  const __exports__ = ["Connection"];
+  'use strict';
+
+  const __exports__ = ['Connection'];
 
   function nsResolver(prefix) {
-    const baseUrl = "http://schemas.microsoft.com/exchange/autodiscover/";
+    const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
     const ns = {
-      "ad": baseUrl + "responseschema/2006",
-      "ms": baseUrl + "mobilesync/responseschema/2006",
+      'ad': baseUrl + 'responseschema/2006',
+      'ms': baseUrl + 'mobilesync/responseschema/2006',
     };
     return ns[prefix] || null;
   }
@@ -40,7 +42,7 @@
 
   Connection.prototype = {
     _getAuth: function() {
-      return "Basic " + btoa(this._email + ":" + this._password);
+      return 'Basic ' + btoa(this._email + ':' + this._password);
     },
 
     autodiscover: function(aCallback) {
@@ -50,53 +52,53 @@
       let conn = this;
 
       let xhr = new XMLHttpRequest({mozSystem: true});
-      xhr.open("POST", "https://m.hotmail.com/autodiscover/autodiscover.xml",
+      xhr.open('POST', 'https://m.hotmail.com/autodiscover/autodiscover.xml',
                true);
-      xhr.setRequestHeader("Content-Type", "text/xml");
-      xhr.setRequestHeader("Authorization", this._getAuth());
+      xhr.setRequestHeader('Content-Type', 'text/xml');
+      xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
-        if (typeof logXhr == "function") // TODO: remove this debug code
+        if (typeof logXhr == 'function') // TODO: remove this debug code
           logXhr(xhr);
 
-        let doc = new DOMParser().parseFromString(xhr.responseText, "text/xml");
+        let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
         let getString = function(xpath, rel) {
           return doc.evaluate(xpath, rel, nsResolver, XPathResult.STRING_TYPE,
                               null).stringValue;
         };
 
         let error = doc.evaluate(
-          "/ad:Autodiscover/ms:Response/ms:Error", doc, nsResolver,
+          '/ad:Autodiscover/ms:Response/ms:Error', doc, nsResolver,
           XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
         if (error) {
           aCallback({
-            "error": {
-              "message": getString("ms:Message/text()", error),
+            'error': {
+              'message': getString('ms:Message/text()', error),
             }
           });
         }
         else {
           let user = doc.evaluate(
-            "/ad:Autodiscover/ms:Response/ms:User", doc, nsResolver,
+            '/ad:Autodiscover/ms:Response/ms:User', doc, nsResolver,
             XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
           let server = doc.evaluate(
-            "/ad:Autodiscover/ms:Response/ms:Action/ms:Settings/ms:Server", doc,
+            '/ad:Autodiscover/ms:Response/ms:Action/ms:Settings/ms:Server', doc,
             nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
             .singleNodeValue;
 
           let result = {
-            "user": {
-              "name":  getString("ms:DisplayName/text()",  user),
-              "email": getString("ms:EMailAddress/text()", user),
+            'user': {
+              'name':  getString('ms:DisplayName/text()',  user),
+              'email': getString('ms:EMailAddress/text()', user),
             },
-            "server": {
-              "type": getString("ms:Type/text()", server),
-              "url":  getString("ms:Url/text()",  server),
-              "name": getString("ms:Name/text()", server),
+            'server': {
+              'type': getString('ms:Type/text()', server),
+              'url':  getString('ms:Url/text()',  server),
+              'name': getString('ms:Name/text()', server),
             }
           };
 
-          conn.baseURL = result.server.url + "/Microsoft-Server-ActiveSync";
+          conn.baseURL = result.server.url + '/Microsoft-Server-ActiveSync';
           conn.options(conn.baseURL, function(aSubResult) {
             conn.connected = true;
             result.options = aSubResult;
@@ -122,14 +124,14 @@
 
     options: function(aURL, aCallback) {
       let xhr = new XMLHttpRequest({mozSystem: true});
-      xhr.open("OPTIONS", aURL, true);
+      xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
-        if (typeof logXhr == "function") // TODO: remove this debug code
+        if (typeof logXhr == 'function') // TODO: remove this debug code
           logXhr(xhr);
 
         let result = {
-          "versions": xhr.getResponseHeader("MS-ASProtocolVersions").split(","),
-          "commands": xhr.getResponseHeader("MS-ASProtocolCommands").split(","),
+          'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
+          'commands': xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
         };
         aCallback(result);
       };
@@ -148,27 +150,27 @@
       let r = new WBXML.Reader(aXml, ASCP);
       let command = r.document.next().localTagName;
       let xhr = new XMLHttpRequest({mozSystem: true});
-      xhr.open("POST", this.baseURL + "?Cmd=" + command + "&User=" +
-               this._email + "&DeviceId=v140Device&DeviceType=SmartPhone",
+      xhr.open('POST', this.baseURL + '?Cmd=' + command + '&User=' +
+               this._email + '&DeviceId=v140Device&DeviceType=SmartPhone',
                true);
-      xhr.setRequestHeader("MS-ASProtocolVersion", "14.0");
-      xhr.setRequestHeader("Content-Type", "application/vnd.ms-sync.wbxml");
-      xhr.setRequestHeader("User-Agent", "B2G");
-      xhr.setRequestHeader("Authorization", this._getAuth());
+      xhr.setRequestHeader('MS-ASProtocolVersion', '14.0');
+      xhr.setRequestHeader('Content-Type', 'application/vnd.ms-sync.wbxml');
+      xhr.setRequestHeader('User-Agent', 'B2G');
+      xhr.setRequestHeader('Authorization', this._getAuth());
 
       let conn = this;
       xhr.onload = function() {
-        if (typeof logXhr == "function") // TODO: remove this debug code
+        if (typeof logXhr == 'function') // TODO: remove this debug code
           logXhr(xhr);
 
         if (xhr.status == 451) {
-          conn.baseURL = xhr.getResponseHeader("X-MS-Location");
+          conn.baseURL = xhr.getResponseHeader('X-MS-Location');
           conn.doCommand(aXml, aCallback);
           return;
         }
         if (xhr.status != 200) {
-          if (typeof print == "function") // TODO: remove this debug code
-            print("Error!\n");
+          if (typeof print == 'function') // TODO: remove this debug code
+            print('Error!\n');
           return;
         }
 
@@ -177,7 +179,7 @@
         }
         else {
           let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-          if (typeof log == "function") { // TODO: remove this debug code
+          if (typeof log == 'function') { // TODO: remove this debug code
             log(r.dump());
             r.rewind();
           }
@@ -186,7 +188,7 @@
         }
       };
 
-      xhr.responseType = "arraybuffer";
+      xhr.responseType = 'arraybuffer';
       xhr.send(aXml.buffer);
     },
   };
