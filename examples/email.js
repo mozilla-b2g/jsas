@@ -74,6 +74,7 @@ function getMessages(folderData) {
   messagesNode.appendChild(folderName);
 
   let as = ActiveSyncCodepages.AirSync.Tags;
+  let asb = ActiveSyncCodepages.AirSyncBase.Tags;
   let em = ActiveSyncCodepages.Email.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
@@ -101,6 +102,13 @@ function getMessages(folderData) {
          .stag(as.Collection)
            .tag(as.SyncKey, syncKey)
            .tag(as.CollectionId, folderData.ServerId)
+           .stag(as.Options)
+             .stag(asb.BodyPreference)
+               .tag(asb.Type, '1')
+             .etag()
+             .tag(as.MIMESupport, '2')
+             .tag(as.MIMETruncation, '7')
+           .etag()
          .etag()
        .etag()
      .etag();
@@ -130,6 +138,39 @@ function getMessages(folderData) {
       });
 
       e.run(aResponse);
+      /*getMessage(syncKey, folderData.ServerId,
+                 '0fbb7658-d693-11e1-802b-002264c1d38c');*/
     });
   });
 }
+
+/*function getMessage(syncKey, folderId, messageId) {
+  let as = ActiveSyncCodepages.AirSync.Tags;
+  let asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  let em = ActiveSyncCodepages.Email.Tags;
+
+  let w = new WBXML.Writer('1.3', 1, 'UTF-8');
+  w.stag(as.Sync)
+     .stag(as.Collections)
+       .stag(as.Collection)
+         .tag(as.SyncKey, syncKey)
+         .tag(as.CollectionId, folderId)
+         .stag(as.Commands)
+           .stag(as.Fetch)
+             .tag(as.ServerId, messageId)
+           .etag()
+         .etag()
+         .stag(as.Options)
+           .stag(asb.BodyPreference)
+             .tag(asb.Type, '4')
+           .etag()
+           .tag(as.MIMESupport, '0')
+           .tag(as.MIMETruncation, '7')
+         .etag()
+       .etag()
+     .etag()
+   .etag();
+
+  conn.doCommand(w, function(aResponse) {
+  });
+}*/
