@@ -86,7 +86,7 @@
             nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
             .singleNodeValue;
 
-          let result = {
+          conn.config = {
             'user': {
               'name':  getString('ms:DisplayName/text()',  user),
               'email': getString('ms:EMailAddress/text()', user),
@@ -101,7 +101,8 @@
           conn.baseURL = result.server.url + '/Microsoft-Server-ActiveSync';
           conn.options(conn.baseURL, function(aSubResult) {
             conn.connected = true;
-            result.options = aSubResult;
+            conn.config.options = aSubResult;
+
             if (aCallback)
               aCallback.call(conn, result);
           });
