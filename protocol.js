@@ -98,13 +98,14 @@
             }
           };
 
-          conn.baseURL = result.server.url + '/Microsoft-Server-ActiveSync';
+          conn.baseURL = conn.config.server.url +
+            '/Microsoft-Server-ActiveSync';
           conn.options(conn.baseURL, function(aSubResult) {
             conn.connected = true;
             conn.config.options = aSubResult;
 
             if (aCallback)
-              aCallback.call(conn, result);
+              aCallback.call();
           });
         }
       };
