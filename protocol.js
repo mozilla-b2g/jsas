@@ -102,6 +102,7 @@
             '/Microsoft-Server-ActiveSync';
           conn.options(conn.baseURL, function(aSubResult) {
             conn.connected = true;
+            conn.version = aSubResult.versions[aSubResult.versions.length-1];
             conn.config.options = aSubResult;
 
             if (aCallback)
@@ -155,7 +156,7 @@
       xhr.open('POST', this.baseURL + '?Cmd=' + command + '&User=' +
                this._email + '&DeviceId=v140Device&DeviceType=SmartPhone',
                true);
-      xhr.setRequestHeader('MS-ASProtocolVersion', '14.0');
+      xhr.setRequestHeader('MS-ASProtocolVersion', this.version);
       xhr.setRequestHeader('Content-Type', 'application/vnd.ms-sync.wbxml');
       xhr.setRequestHeader('User-Agent', 'B2G');
       xhr.setRequestHeader('Authorization', this._getAuth());

@@ -46,6 +46,7 @@ window.addEventListener('load', function() {
 
     let e = new WBXML.EventParser();
 
+    let first = true;
     e.addEventListener([fh.FolderSync, fh.Changes, fh.Add], function(node) {
       let folderData = {};
       for (let [,child] in Iterator(node.children))
@@ -58,6 +59,11 @@ window.addEventListener('load', function() {
         getMessages(folderData);
       }, false);
       foldersNode.appendChild(row);
+
+      if (first) {
+        first = false;
+        getMessages(folderData);
+      }
     });
 
     e.run(aResponse);
@@ -81,7 +87,11 @@ function getMessages(folderData) {
   w.stag(as.Sync)
      .stag(as.Collections)
        .stag(as.Collection)
-         .tag(as.SyncKey, '0')
+
+  if (conn.version == '2.5')
+        w.tag(as.Class, 'Email')
+
+        w.tag(as.SyncKey, '0')
          .tag(as.CollectionId, folderData.ServerId)
        .etag()
      .etag()
@@ -100,13 +110,21 @@ function getMessages(folderData) {
     w.stag(as.Sync)
        .stag(as.Collections)
          .stag(as.Collection)
-           .tag(as.SyncKey, syncKey)
+
+    if (conn.version == '2.5')
+          w.tag(as.Class, 'Email');
+
+          w.tag(as.SyncKey, syncKey)
            .tag(as.CollectionId, folderData.ServerId)
+           .tag(as.GetChanges)
            .stag(as.Options)
-             .stag(asb.BodyPreference)
+
+    if (conn.version == '14.0')
+            w.stag(asb.BodyPreference)
                .tag(asb.Type, '1')
-             .etag()
-             .tag(as.MIMESupport, '2')
+             .etag();
+
+            w.tag(as.MIMESupport, '0')
              .tag(as.MIMETruncation, '7')
            .etag()
          .etag()

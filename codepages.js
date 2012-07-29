@@ -123,6 +123,16 @@
 
     Email: {
       Tags: {
+        Attachment:              0x0205,
+        Attachments:             0x0206,
+        AttName:                 0x0207,
+        AttSize:                 0x0208,
+        Att0Id:                  0x0209,
+        AttMethod:               0x020A,
+        AttRemoved:              0x020B,
+        Body:                    0x020C,
+        BodySize:                0x020D,
+        BodyTruncated:           0x020E,
         DateReceived:            0x020F,
         DisplayTo:               0x0211,
         Importance:              0x0212,
