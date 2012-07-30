@@ -41,15 +41,25 @@
       #content {
         display: table;
         width: 100%;
+        border-collapse: collapse;
+      }
+      #content > * {
+        display: table-cell;
+        border: 1px solid gray;
+        vertical-align: top;
       }
       #folders {
-        display: table-cell;
-        border: 1px solid gray;
         width: 20%;
       }
-      #messages {
-        display: table-cell;
-        border: 1px solid gray;
+      #messages, #message {
+        width: 40%;
+      }
+      #message {
+        white-space: pre-wrap;
+      }
+      h1 {
+        margin-top: 0;
+        border-bottom: 1px solid gray;
       }
     </style>
   </head>
@@ -57,6 +67,7 @@
     <div id="content">
       <div id="folders"></div>
       <div id="messages"></div>
+      <div id="message"></div>
     </div>
     Log
     <div id="log" class="output"></div>

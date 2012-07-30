@@ -117,6 +117,10 @@ function getMessages(folderData) {
           w.tag(as.SyncKey, syncKey)
            .tag(as.CollectionId, folderData.ServerId)
            .tag(as.GetChanges)
+
+/* The following code can be used to get the message bodies of all the new
+   messages since the last sync:
+
            .stag(as.Options)
 
     if (conn.version == '14.0')
@@ -127,6 +131,7 @@ function getMessages(folderData) {
             w.tag(as.MIMESupport, '0')
              .tag(as.MIMETruncation, '7')
            .etag()
+*/
          .etag()
        .etag()
      .etag();
@@ -138,31 +143,41 @@ function getMessages(folderData) {
         syncKey = node.children[0].textContent;
       });
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.Commands,
-                          as.Add, as.ApplicationData],
+                          as.Add],
                          function(node) {
         let headers = {};
 
         for (let [,child] in Iterator(node.children)) {
-          let childText = child.children.length &&
-                          child.children[0].textContent;
+          if (child.tag == as.ServerId) {
+            headers.serverId = child.children[0].textContent;
+          }
+          if (child.tag == as.ApplicationData) {
+            for (let [,grandchild] in Iterator(child.children)) {
+              let grandchildText = grandchild.children.length &&
+                                   grandchild.children[0].textContent;
 
-          if (child.tag == em.Subject)
-            headers.subject = childText;
+              if (grandchild.tag == em.Subject)
+                headers.subject = grandchildText;
+            }
+          }
         }
 
         let message = document.createElement('div');
         message.textContent = headers.subject;
+        message.addEventListener('click', function() {
+          getMessage(syncKey, folderData.ServerId, headers.serverId);
+        }, false);
         messagesNode.appendChild(message);
       });
 
       e.run(aResponse);
-      /*getMessage(syncKey, folderData.ServerId,
-                 '0fbb7658-d693-11e1-802b-002264c1d38c');*/
     });
   });
 }
 
-/*function getMessage(syncKey, folderId, messageId) {
+function getMessage(syncKey, folderId, messageId) {
+  let messageNode = document.getElementById('message');
+
   let as = ActiveSyncCodepages.AirSync.Tags;
   let asb = ActiveSyncCodepages.AirSyncBase.Tags;
   let em = ActiveSyncCodepages.Email.Tags;
@@ -171,24 +186,48 @@ function getMessages(folderData) {
   w.stag(as.Sync)
      .stag(as.Collections)
        .stag(as.Collection)
-         .tag(as.SyncKey, syncKey)
+
+    if (conn.version == '2.5')
+        w.tag(as.Class, 'Email');
+
+        w.tag(as.SyncKey, syncKey)
          .tag(as.CollectionId, folderId)
+         .stag(as.Options)
+
+    if (conn.version == '14.0')
+          w.stag(asb.BodyPreference)
+             .tag(asb.Type, '1')
+           .etag();
+
+          w.tag(as.MIMESupport, '0')
+           .tag(as.MIMETruncation, '7')
+         .etag()
          .stag(as.Commands)
            .stag(as.Fetch)
              .tag(as.ServerId, messageId)
            .etag()
-         .etag()
-         .stag(as.Options)
-           .stag(asb.BodyPreference)
-             .tag(asb.Type, '4')
-           .etag()
-           .tag(as.MIMESupport, '0')
-           .tag(as.MIMETruncation, '7')
          .etag()
        .etag()
      .etag()
    .etag();
 
   conn.doCommand(w, function(aResponse) {
+    let e = new WBXML.EventParser();
+    e.addEventListener([as.Sync, as.Collections, as.Collection, as.Responses,
+                        as.Fetch, as.ApplicationData],
+    function(node) {
+      for (let [,child] in Iterator(node.children)) {
+        if (child.tag == asb.Body) {
+          for (let [,grandchild] in Iterator(child.children)) {
+            if (grandchild.tag == asb.Data)
+              messageNode.textContent = grandchild.children[0].textContent;
+          }
+        }
+        else if (child.tag == em.Body) {
+          messageNode.textContent = child.children[0].textContent;
+        }
+      }
+    });
+    e.run(aResponse);
   });
-}*/
+}
