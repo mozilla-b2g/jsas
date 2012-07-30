@@ -70,7 +70,7 @@ window.addEventListener('load', function() {
   });
 }, false);
 
-function getMessages(folderData) {
+function getMessages(folderData, getBodies) {
   let messagesNode = document.getElementById('messages');
   while (messagesNode.lastChild)
     messagesNode.removeChild(messagesNode.lastChild);
@@ -117,21 +117,23 @@ function getMessages(folderData) {
           w.tag(as.SyncKey, syncKey)
            .tag(as.CollectionId, folderData.ServerId)
            .tag(as.GetChanges)
-
-/* The following code can be used to get the message bodies of all the new
-   messages since the last sync:
-
            .stag(as.Options)
 
-    if (conn.version == '14.0')
+    if (getBodies) {
+      if (conn.version == '14.0')
             w.stag(asb.BodyPreference)
                .tag(asb.Type, '1')
              .etag();
 
             w.tag(as.MIMESupport, '0')
-             .tag(as.MIMETruncation, '7')
-           .etag()
-*/
+             .tag(as.MIMETruncation, '7');
+    }
+    else if (conn.version == '2.5') {
+            w.tag(as.MIMESupport, '0')
+             .tag(as.Truncation, '0');
+    }
+
+          w.etag()
          .etag()
        .etag()
      .etag();
