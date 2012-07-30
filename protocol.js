@@ -172,8 +172,7 @@
           return;
         }
         if (xhr.status != 200) {
-          if (typeof print == 'function') // TODO: remove this debug code
-            print('Error!\n');
+          // TODO: do something here!
           return;
         }
 
