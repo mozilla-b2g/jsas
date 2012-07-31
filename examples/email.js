@@ -103,7 +103,7 @@ function getMessages(folderData, getBodies) {
        .stag(as.Collection)
 
   if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
-        w.tag(as.Class, 'Email')
+        w.tag(as.Class, 'Email');
 
         w.tag(as.SyncKey, '0')
          .tag(as.CollectionId, folderData.ServerId)
