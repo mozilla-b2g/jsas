@@ -20,14 +20,19 @@ function log(s) {
   output.textContent += s;
 }
 
-function logXhr(xhr) {
-  log(xhr.status + ' ' + xhr.statusText + '\n' +
-      xhr.getAllResponseHeaders() + '\n');
-  try {
-    log(xhr.responseText + '\n');
-  } catch(e) {}
+function logWBXML(data) {
+  let incoming = data instanceof WBXML.Reader;
+  let wrapper = new Array(80+1).join(incoming ? '<' : '>');
 
-  log('\n');
+  log(wrapper+'\n');
+  if (incoming) {
+    log(data.dump());
+    data.rewind();
+  }
+  else {
+    log(new WBXML.Reader(data, ActiveSyncCodepages).dump());
+  }
+  log(wrapper+'\n\n');
 }
 
 var conn;
@@ -39,8 +44,11 @@ window.addEventListener('load', function() {
   w.stag(fh.FolderSync)
      .tag(fh.SyncKey, '0')
    .etag();
+  logWBXML(w);
 
   conn.doCommand(w, function(aResponse) {
+    logWBXML(aResponse);
+
     let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
     let foldersNode = document.getElementById('folders');
 
@@ -96,8 +104,11 @@ function getMessages(folderData, getBodies) {
        .etag()
      .etag()
    .etag();
+  logWBXML(w);
 
   conn.doCommand(w, function(aResponse) {
+    logWBXML(aResponse);
+
     let syncKey;
     let e = new WBXML.EventParser();
     e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
@@ -137,8 +148,11 @@ function getMessages(folderData, getBodies) {
          .etag()
        .etag()
      .etag();
+    logWBXML(w);
 
     conn.doCommand(w, function(aResponse) {
+      logWBXML(aResponse);
+
       let e = new WBXML.EventParser();
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
                          function(node) {
@@ -212,8 +226,11 @@ function getMessage(syncKey, folderId, messageId) {
        .etag()
      .etag()
    .etag();
+  logWBXML(w);
 
   conn.doCommand(w, function(aResponse) {
+    logWBXML(aResponse);
+
     let e = new WBXML.EventParser();
     e.addEventListener([as.Sync, as.Collections, as.Collection, as.Responses,
                         as.Fetch, as.ApplicationData],

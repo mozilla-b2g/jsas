@@ -34,9 +34,11 @@
     return ns[prefix] || null;
   }
 
-  function Connection(aEmail, aPassword) {
+  function Connection(aEmail, aPassword, aDeviceId, aDeviceType) {
     this._email = aEmail;
     this._password = aPassword;
+    this._deviceId = aDeviceId || 'v140Device';
+    this._deviceType = aDeviceType || 'SmartPhone';
     this.connected = false;
   }
 
@@ -58,9 +60,6 @@
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
-        if (typeof logXhr == 'function') // TODO: remove this debug code
-          logXhr(xhr);
-
         let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
         let getString = function(xpath, rel) {
           return doc.evaluate(xpath, rel, nsResolver, XPathResult.STRING_TYPE,
@@ -129,9 +128,6 @@
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
-        if (typeof logXhr == 'function') // TODO: remove this debug code
-          logXhr(xhr);
-
         let result = {
           'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
           'commands': xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
@@ -151,21 +147,25 @@
 
     _doCommandReal: function(aXml, aCallback) {
       let r = new WBXML.Reader(aXml, ASCP);
-      let command = r.document.next().localTagName;
+      let commandName = r.document.next().localTagName;
+      if (this.config.options.commands.indexOf(commandName) === -1) {
+        // TODO: do something here!
+        return;
+      }
+
       let xhr = new XMLHttpRequest({mozSystem: true});
-      xhr.open('POST', this.baseURL + '?Cmd=' + command + '&User=' +
-               this._email + '&DeviceId=v140Device&DeviceType=SmartPhone',
+      xhr.open('POST', this.baseURL +
+               '?Cmd='        + encodeURIComponent(commandName) +
+               '&User='       + encodeURIComponent(this._email) +
+               '&DeviceId='   + encodeURIComponent(this._deviceId) +
+               '&DeviceType=' + encodeURIComponent(this._deviceType),
                true);
       xhr.setRequestHeader('MS-ASProtocolVersion', this.version);
       xhr.setRequestHeader('Content-Type', 'application/vnd.ms-sync.wbxml');
-      xhr.setRequestHeader('User-Agent', 'B2G');
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       let conn = this;
       xhr.onload = function() {
-        if (typeof logXhr == 'function') // TODO: remove this debug code
-          logXhr(xhr);
-
         if (xhr.status == 451) {
           conn.baseURL = xhr.getResponseHeader('X-MS-Location');
           conn.doCommand(aXml, aCallback);
@@ -176,18 +176,10 @@
           return;
         }
 
-        if (xhr.response.byteLength == 0) {
-          aCallback(null);
-        }
-        else {
-          let r = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-          if (typeof log == 'function') { // TODO: remove this debug code
-            log(r.dump());
-            r.rewind();
-          }
-
-          aCallback(r);
-        }
+        let response = null;
+        if (xhr.response.byteLength > 0)
+          response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
+        aCallback(response);
       };
 
       xhr.responseType = 'arraybuffer';
