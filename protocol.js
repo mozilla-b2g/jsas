@@ -105,7 +105,7 @@
             conn.config.options = aSubResult;
 
             if (aCallback)
-              aCallback.call();
+              aCallback(conn.config);
           });
         }
       };
@@ -139,10 +139,20 @@
     },
 
     doCommand: function(aXml, aCallback) {
-      if (!this.connected)
-        this.autodiscover(this._doCommandReal.bind(this, aXml, aCallback));
-      else
+      if (this.connected) {
         this._doCommandReal(aXml, aCallback);
+      }
+      else {
+        this.autodiscover((function (aConfig) {
+          if ('error' in aConfig) {
+            // TODO: do something here!
+            console.log('Error during autodiscover: ' + aConfig.error.message);
+          }
+          else {
+            this._doCommandReal(aXml, aCallback);
+          }
+        }).bind(this));
+      }
     },
 
     _doCommandReal: function(aXml, aCallback) {
@@ -150,6 +160,7 @@
       let commandName = r.document.next().localTagName;
       if (this.config.options.commands.indexOf(commandName) === -1) {
         // TODO: do something here!
+        console.log("This server doesn't support the command " + commandName);
         return;
       }
 
@@ -173,6 +184,8 @@
         }
         if (xhr.status != 200) {
           // TODO: do something here!
+          console.log('ActiveSync command returned failure response ' +
+                      xhr.status);
           return;
         }
 
