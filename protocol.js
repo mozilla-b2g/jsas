@@ -28,8 +28,9 @@
   function nsResolver(prefix) {
     const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
     const ns = {
-      'ad': baseUrl + 'responseschema/2006',
-      'ms': baseUrl + 'mobilesync/responseschema/2006',
+      rq: baseUrl + 'mobilesync/requestschema/2006',
+      ad: baseUrl + 'responseschema/2006',
+      ms: baseUrl + 'mobilesync/responseschema/2006',
     };
     return ns[prefix] || null;
   }
@@ -114,10 +115,11 @@
       // http://ejohn.org/blog/javascript-micro-templating/ here?
       let postdata =
       '<?xml version="1.0" encoding="utf-8"?>\n' +
-      '<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/mobilesync/requestschema/2006">\n' +
+      '<Autodiscover xmlns="' + nsResolver('rq') + '">\n' +
       '  <Request>\n' +
       '    <EMailAddress>' + this._email + '</EMailAddress>\n' +
-      '      <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006</AcceptableResponseSchema>\n' +
+      '    <AcceptableResponseSchema>' + nsResolver('ms') +
+           '</AcceptableResponseSchema>\n' +
       '  </Request>\n' +
       '</Autodiscover>';
 
