@@ -102,7 +102,7 @@ function getMessages(folderData, getBodies) {
      .stag(as.Collections)
        .stag(as.Collection)
 
-  if (conn.version == '2.5')
+  if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
         w.tag(as.Class, 'Email')
 
         w.tag(as.SyncKey, '0')
@@ -132,7 +132,7 @@ function getMessages(folderData, getBodies) {
        .stag(as.Collections)
          .stag(as.Collection)
 
-    if (conn.version == '2.5')
+    if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
           w.tag(as.Class, 'Email');
 
           w.tag(as.SyncKey, syncKey)
@@ -141,7 +141,7 @@ function getMessages(folderData, getBodies) {
            .stag(as.Options)
 
     if (getBodies) {
-      if (conn.version == '14.0')
+      if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
             w.stag(asb.BodyPreference)
                .tag(asb.Type, '1')
              .etag();
@@ -149,7 +149,7 @@ function getMessages(folderData, getBodies) {
             w.tag(as.MIMESupport, '0')
              .tag(as.MIMETruncation, '7');
     }
-    else if (conn.version == '2.5') {
+    else if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.0')) {
             w.tag(as.MIMESupport, '0')
              .tag(as.Truncation, '0');
     }
@@ -217,14 +217,14 @@ function getMessage(syncKey, folderId, messageId) {
      .stag(as.Collections)
        .stag(as.Collection)
 
-    if (conn.version == '2.5')
+  if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
         w.tag(as.Class, 'Email');
 
         w.tag(as.SyncKey, syncKey)
          .tag(as.CollectionId, folderId)
          .stag(as.Options)
 
-    if (conn.version == '14.0')
+  if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
           w.stag(asb.BodyPreference)
              .tag(asb.Type, '1')
            .etag();

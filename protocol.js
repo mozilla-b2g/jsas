@@ -23,7 +23,7 @@
 }(this, function(WBXML, ASCP) {
   'use strict';
 
-  const __exports__ = ['Connection'];
+  const __exports__ = ['VersionInt', 'Connection'];
 
   function nsResolver(prefix) {
     const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
@@ -35,6 +35,11 @@
     return ns[prefix] || null;
   }
 
+  function VersionInt(str) {
+    let [major, minor] = str.split('.').map(function(x) parseInt(x));
+    return (major << 16) + minor;
+  }
+
   function Connection(aEmail, aPassword, aDeviceId, aDeviceType) {
     this._email = aEmail;
     this._password = aPassword;
@@ -44,6 +49,8 @@
   }
 
   Connection.prototype = {
+    get currentVersionInt() VersionInt(this.currentVersion),
+
     _getAuth: function() {
       return 'Basic ' + btoa(this._email + ':' + this._password);
     },
@@ -102,7 +109,7 @@
             '/Microsoft-Server-ActiveSync';
           conn.options(conn.baseURL, function(aSubResult) {
             conn.connected = true;
-            conn.version = aSubResult.versions[aSubResult.versions.length-1];
+            conn.currentVersion = aSubResult.versions.slice(-1)[0];
             conn.config.options = aSubResult;
 
             if (aCallback)
@@ -179,7 +186,7 @@
                '&DeviceId='   + encodeURIComponent(this._deviceId) +
                '&DeviceType=' + encodeURIComponent(this._deviceType),
                true);
-      xhr.setRequestHeader('MS-ASProtocolVersion', this.version);
+      xhr.setRequestHeader('MS-ASProtocolVersion', this.currentVersion);
       xhr.setRequestHeader('Content-Type', 'application/vnd.ms-sync.wbxml');
       xhr.setRequestHeader('Authorization', this._getAuth());
 
