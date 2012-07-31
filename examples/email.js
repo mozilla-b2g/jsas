@@ -21,16 +21,18 @@ function log(s) {
 }
 
 function logWBXML(data) {
-  let incoming = data instanceof WBXML.Reader;
-  let wrapper = new Array(80+1).join(incoming ? '<' : '>');
+  let outgoing = data instanceof WBXML.Writer;
+  let wrapper = new Array(80+1).join(outgoing ? '>' : '<');
 
   log(wrapper+'\n');
-  if (incoming) {
-    log(data.dump());
-    data.rewind();
+  if (outgoing) {
+    log(new WBXML.Reader(data, ActiveSyncCodepages).dump());
   }
   else {
-    log(new WBXML.Reader(data, ActiveSyncCodepages).dump());
+    if (data) {
+      log(data.dump());
+      data.rewind();
+    }
   }
   log(wrapper+'\n\n');
 }
@@ -46,8 +48,12 @@ window.addEventListener('load', function() {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aResponse) {
+  conn.doCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
+    if (aError) {
+      alert(aError)
+      return;
+    }
 
     let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
     let foldersNode = document.getElementById('folders');
@@ -106,8 +112,12 @@ function getMessages(folderData, getBodies) {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aResponse) {
+  conn.doCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
+    if (aError) {
+      alert(aError)
+      return;
+    }
 
     let syncKey;
     let e = new WBXML.EventParser();
@@ -150,8 +160,12 @@ function getMessages(folderData, getBodies) {
      .etag();
     logWBXML(w);
 
-    conn.doCommand(w, function(aResponse) {
+    conn.doCommand(w, function(aError, aResponse) {
       logWBXML(aResponse);
+      if (aError) {
+        alert(aError)
+        return;
+      }
 
       let e = new WBXML.EventParser();
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
@@ -228,8 +242,12 @@ function getMessage(syncKey, folderId, messageId) {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aResponse) {
+  conn.doCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
+    if (aError) {
+      alert(aError)
+      return;
+    }
 
     let e = new WBXML.EventParser();
     e.addEventListener([as.Sync, as.Collections, as.Collection, as.Responses,

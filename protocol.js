@@ -148,7 +148,10 @@
         this.autodiscover((function (aConfig) {
           if ('error' in aConfig) {
             // TODO: do something here!
-            console.log('Error during autodiscover: ' + aConfig.error.message);
+            let error = new Error('Error during autodiscover: ' +
+                                  aConfig.error.message);
+            console.log(error);
+            aCallback(error);
           }
           else {
             this._doCommandReal(aXml, aCallback);
@@ -162,7 +165,10 @@
       let commandName = r.document.next().localTagName;
       if (this.config.options.commands.indexOf(commandName) === -1) {
         // TODO: do something here!
-        console.log("This server doesn't support the command " + commandName);
+        let error = new Error("This server doesn't support the command " +
+                              commandName);
+        console.log(error);
+        aCallback(error);
         return;
       }
 
@@ -184,17 +190,20 @@
           conn.doCommand(aXml, aCallback);
           return;
         }
+
         if (xhr.status != 200) {
           // TODO: do something here!
-          console.log('ActiveSync command returned failure response ' +
-                      xhr.status);
+          let error = new Error('ActiveSync command returned failure ' +
+                                'response ' + xhr.status);
+          console.log(error);
+          aCallback(error);
           return;
         }
 
         let response = null;
         if (xhr.response.byteLength > 0)
           response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-        aCallback(response);
+        aCallback(null, response);
       };
 
       xhr.responseType = 'arraybuffer';
