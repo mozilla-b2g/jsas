@@ -23,7 +23,22 @@
 }(this, function(WBXML, ASCP) {
   'use strict';
 
-  const __exports__ = ['VersionInt', 'Connection'];
+  const __exports__ = ['VersionInt', 'Connection', 'AutodiscoverError',
+                       'AutodiscoverDomainError'];
+
+  function AutodiscoverError(message) {
+      this.name = 'ActiveSync.AutodiscoverError';
+      this.message = message || '';
+  }
+  AutodiscoverError.prototype = new Error();
+  AutodiscoverError.prototype.constructor = AutodiscoverError;
+
+  function AutodiscoverDomainError(message) {
+      this.name = 'ActiveSync.AutodiscoverDomainError';
+      this.message = message || '';
+  }
+  AutodiscoverDomainError.prototype = new AutodiscoverError();
+  AutodiscoverDomainError.prototype.constructor = AutodiscoverDomainError;
 
   function nsResolver(prefix) {
     const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
@@ -56,66 +71,79 @@
     },
 
     autodiscover: function(aCallback) {
+      let domain = this._email.substring(this._email.indexOf('@') + 1);
+
+      this._autodiscover(domain, (function(aStatus, aConfig) {
+        if (aStatus instanceof AutodiscoverDomainError)
+          this._autodiscover('autodiscover.' + domain, aCallback);
+        else
+          aCallback(aStatus);
+      }).bind(this));
+    },
+
+    _autodiscover: function(aHost, aCallback) {
       // TODO: we need to be smarter here and do some stuff with redirects and
       // other fun stuff, but this works for hotmail, so yay.
 
       let conn = this;
 
       let xhr = new XMLHttpRequest({mozSystem: true});
-      xhr.open('POST', 'https://m.hotmail.com/autodiscover/autodiscover.xml',
+      xhr.open('POST', 'https://' + aHost + '/autodiscover/autodiscover.xml',
                true);
       xhr.setRequestHeader('Content-Type', 'text/xml');
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
         let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
-        let getString = function(xpath, rel) {
+
+        function getNode(xpath, rel) {
+          return doc.evaluate(xpath, rel, nsResolver,
+                              XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+                    .singleNodeValue;
+        }
+        function getString(xpath, rel) {
           return doc.evaluate(xpath, rel, nsResolver, XPathResult.STRING_TYPE,
                               null).stringValue;
+        }
+
+        if (doc.documentElement.tagName === 'parsererror') {
+          aCallback(new AutodiscoverDomainError('Error parsing autodiscover ' +
+                                                'response'));
+          return;
+        }
+
+        let error = getNode('/ad:Autodiscover/ms:Response/ms:Error', doc);
+        if (error) {
+          aCallback(new AutodiscoverError(getString('ms:Message/text()',
+                                                    error)));
+          return;
+        }
+
+        let user = getNode('/ad:Autodiscover/ms:Response/ms:User', doc);
+        let server = getNode('/ad:Autodiscover/ms:Response/ms:Action/' +
+                             'ms:Settings/ms:Server', doc);
+
+        conn.config = {
+          'user': {
+            'name':  getString('ms:DisplayName/text()',  user),
+            'email': getString('ms:EMailAddress/text()', user),
+          },
+          'server': {
+            'type': getString('ms:Type/text()', server),
+            'url':  getString('ms:Url/text()',  server),
+            'name': getString('ms:Name/text()', server),
+          }
         };
 
-        let error = doc.evaluate(
-          '/ad:Autodiscover/ms:Response/ms:Error', doc, nsResolver,
-          XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-        if (error) {
-          aCallback({
-            'error': {
-              'message': getString('ms:Message/text()', error),
-            }
-          });
-        }
-        else {
-          let user = doc.evaluate(
-            '/ad:Autodiscover/ms:Response/ms:User', doc, nsResolver,
-            XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-          let server = doc.evaluate(
-            '/ad:Autodiscover/ms:Response/ms:Action/ms:Settings/ms:Server', doc,
-            nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-            .singleNodeValue;
+        conn.baseURL = conn.config.server.url + '/Microsoft-Server-ActiveSync';
+        conn.options(conn.baseURL, function(aStatus, aResult) {
+          conn.connected = true;
+          conn.currentVersion = aResult.versions.slice(-1)[0];
+          conn.config.options = aResult;
 
-          conn.config = {
-            'user': {
-              'name':  getString('ms:DisplayName/text()',  user),
-              'email': getString('ms:EMailAddress/text()', user),
-            },
-            'server': {
-              'type': getString('ms:Type/text()', server),
-              'url':  getString('ms:Url/text()',  server),
-              'name': getString('ms:Name/text()', server),
-            }
-          };
-
-          conn.baseURL = conn.config.server.url +
-            '/Microsoft-Server-ActiveSync';
-          conn.options(conn.baseURL, function(aSubResult) {
-            conn.connected = true;
-            conn.currentVersion = aSubResult.versions.slice(-1)[0];
-            conn.config.options = aSubResult;
-
-            if (aCallback)
-              aCallback(conn.config);
-          });
-        }
+          if (aCallback)
+            aCallback(null, conn.config);
+        });
       };
 
       // TODO: use something like
@@ -137,11 +165,12 @@
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
+        // TODO: handle error codes
         let result = {
           'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
           'commands': xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
         };
-        aCallback(result);
+        aCallback(null, result);
       };
 
       xhr.send();
@@ -152,13 +181,10 @@
         this._doCommandReal(aXml, aCallback);
       }
       else {
-        this.autodiscover((function (aConfig) {
-          if ('error' in aConfig) {
-            // TODO: do something here!
-            let error = new Error('Error during autodiscover: ' +
-                                  aConfig.error.message);
-            console.log(error);
-            aCallback(error);
+        this.autodiscover((function (aStatus, aConfig) {
+          if (aStatus) {
+            console.log(aStatus);
+            aCallback(aStatus);
           }
           else {
             this._doCommandReal(aXml, aCallback);
