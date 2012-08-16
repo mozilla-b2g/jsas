@@ -94,6 +94,7 @@ function getMessages(folderData, getBodies) {
   messagesNode.appendChild(folderName);
 
   let as = ActiveSyncCodepages.AirSync.Tags;
+  let asEnum = ActiveSyncCodepages.AirSync.Enums;
   let asb = ActiveSyncCodepages.AirSyncBase.Tags;
   let em = ActiveSyncCodepages.Email.Tags;
 
@@ -146,12 +147,12 @@ function getMessages(folderData, getBodies) {
                .tag(asb.Type, '1')
              .etag();
 
-            w.tag(as.MIMESupport, '0')
-             .tag(as.MIMETruncation, '7');
+            w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
+             .tag(as.MIMETruncation, asEnum.MIMETruncation.Truncate100K);
     }
     else if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.0')) {
-            w.tag(as.MIMESupport, '0')
-             .tag(as.Truncation, '0');
+            w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
+             .tag(as.Truncation, asEnum.MIMETruncation.TruncateAll);
     }
 
           w.etag()
@@ -209,6 +210,7 @@ function getMessage(syncKey, folderId, messageId) {
   let messageNode = document.getElementById('message');
 
   let as = ActiveSyncCodepages.AirSync.Tags;
+  let asEnum = ActiveSyncCodepages.AirSync.Enums;
   let asb = ActiveSyncCodepages.AirSyncBase.Tags;
   let em = ActiveSyncCodepages.Email.Tags;
 
@@ -229,8 +231,8 @@ function getMessage(syncKey, folderId, messageId) {
              .tag(asb.Type, '1')
            .etag();
 
-          w.tag(as.MIMESupport, '0')
-           .tag(as.MIMETruncation, '7')
+          w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
+           .tag(as.MIMETruncation, asEnum.MIMETruncation.Truncate100K)
          .etag()
          .stag(as.Commands)
            .stag(as.Fetch)
