@@ -106,22 +106,29 @@
                               null).stringValue;
         }
 
-        if (doc.documentElement.tagName === 'parsererror') {
-          aCallback(new AutodiscoverDomainError('Error parsing autodiscover ' +
-                                                'response'));
-          return;
+        if (doc.documentElement.tagName === 'parsererror')
+          return aCallback(new AutodiscoverDomainError(
+            'Error parsing autodiscover response'));
+
+        let responseNode = getNode('/ad:Autodiscover/ms:Response', doc);
+        if (!responseNode)
+          return aCallback(new AutodiscoverDomainError(
+            'Missing Autodiscover Response node'));
+
+        let error = getNode('ms:Error', responseNode) ||
+                    getNode('ms:Action/ms:Error', responseNode);
+        if (error)
+          return aCallback(new AutodiscoverError(
+            getString('ms:Message/text()', error)));
+
+        let redirect = getNode('ms:Action/ms:Redirect', responseNode);
+        if (redirect) {
+          conn._email = getString('text()', redirect);
+          return conn.autodiscover(aCallback);
         }
 
-        let error = getNode('/ad:Autodiscover/ms:Response/ms:Error', doc);
-        if (error) {
-          aCallback(new AutodiscoverError(getString('ms:Message/text()',
-                                                    error)));
-          return;
-        }
-
-        let user = getNode('/ad:Autodiscover/ms:Response/ms:User', doc);
-        let server = getNode('/ad:Autodiscover/ms:Response/ms:Action/' +
-                             'ms:Settings/ms:Server', doc);
+        let user = getNode('ms:User', responseNode);
+        let server = getNode('ms:Action/ms:Settings/ms:Server', responseNode);
 
         conn.config = {
           'user': {
