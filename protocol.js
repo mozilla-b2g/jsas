@@ -70,18 +70,18 @@
       return 'Basic ' + btoa(this._email + ':' + this._password);
     },
 
-    autodiscover: function(aCallback) {
+    autodiscover: function(aCallback, aNoRedirect) {
       let domain = this._email.substring(this._email.indexOf('@') + 1);
 
-      this._autodiscover(domain, (function(aStatus, aConfig) {
+      this._autodiscover(domain, aNoRedirect, (function(aStatus, aConfig) {
         if (aStatus instanceof AutodiscoverDomainError)
-          this._autodiscover('autodiscover.' + domain, aCallback);
+          this._autodiscover('autodiscover.' + domain, aNoRedirect, aCallback);
         else
           aCallback(aStatus);
       }).bind(this));
     },
 
-    _autodiscover: function(aHost, aCallback) {
+    _autodiscover: function(aHost, aNoRedirect, aCallback) {
       // TODO: we need to be smarter here and do some stuff with redirects and
       // other fun stuff, but this works for hotmail, so yay.
 
@@ -123,8 +123,12 @@
 
         let redirect = getNode('ms:Action/ms:Redirect', responseNode);
         if (redirect) {
+          if (aNoRedirect)
+            return aCallback(new AutodiscoverError(
+              'Multiple redirects occurred during autodiscovery'));
+
           conn._email = getString('text()', redirect);
-          return conn.autodiscover(aCallback);
+          return conn.autodiscover(aCallback, true);
         }
 
         let user = getNode('ms:User', responseNode);
