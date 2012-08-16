@@ -837,6 +837,27 @@
         BodyPart:           0x111A,
         Status:             0x111B,
       },
+      Enums: {
+        Type: {
+          PlainText: '1',
+          HTML:      '2',
+          RTF:       '3',
+          MIME:      '4',
+        },
+        Method: {
+          Normal:          '1',
+          EmbeddedMessage: '5',
+          AttachOLE:       '6',
+        },
+        NativeBodyType: {
+          PlainText: '1',
+          HTML:      '2',
+          RTF:       '3',
+        },
+        Status: {
+          Success: '1',
+        },
+      },
     },
 
     Settings: {

@@ -96,6 +96,7 @@ function getMessages(folderData, getBodies) {
   let as = ActiveSyncCodepages.AirSync.Tags;
   let asEnum = ActiveSyncCodepages.AirSync.Enums;
   let asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  let asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
   let em = ActiveSyncCodepages.Email.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
@@ -144,7 +145,7 @@ function getMessages(folderData, getBodies) {
     if (getBodies) {
       if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
             w.stag(asb.BodyPreference)
-               .tag(asb.Type, '1')
+               .tag(asb.Type, asbEnum.Type.PlainText)
              .etag();
 
             w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
@@ -228,7 +229,7 @@ function getMessage(syncKey, folderId, messageId) {
 
   if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
           w.stag(asb.BodyPreference)
-             .tag(asb.Type, '1')
+             .tag(asb.Type, asbEnum.Type.PlainText)
            .etag();
 
           w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
