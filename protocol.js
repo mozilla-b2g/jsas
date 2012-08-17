@@ -51,7 +51,9 @@
   }
 
   function VersionInt(str) {
-    let [major, minor] = str.split('.').map(function(x) parseInt(x));
+    let [major, minor] = str.split('.').map(function(x) {
+      return parseInt(x);
+    });
     return (major << 16) + minor;
   }
 
@@ -64,7 +66,7 @@
   }
 
   Connection.prototype = {
-    get currentVersionInt() VersionInt(this.currentVersion),
+    get currentVersionInt() { return VersionInt(this.currentVersion); },
 
     _getAuth: function() {
       return 'Basic ' + btoa(this._email + ':' + this._password);
