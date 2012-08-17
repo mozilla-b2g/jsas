@@ -33,9 +33,13 @@
         white-space: pre-wrap;
         margin-bottom: 1em;
       }
-      .folder {
+      .link {
         color: blue;
         cursor: pointer;
+      }
+      .link:hover {
+        color: red;
+        text-decoration: underline;
       }
 
       #content {
@@ -69,7 +73,7 @@
       <div id="messages"></div>
       <div id="message"></div>
     </div>
-    Log
+    Log <span class="link" onclick="document.getElementById('log').textContent = '';">(clear)</span>
     <div id="log" class="output"></div>
   </body>
 </html>

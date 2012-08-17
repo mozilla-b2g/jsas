@@ -67,7 +67,7 @@ window.addEventListener('load', function() {
         folderData[child.localTagName] = child.children[0].textContent;
 
       let row = document.createElement('div');
-      row.className = 'folder';
+      row.className = 'link';
       row.textContent = folderData.DisplayName;
       row.addEventListener('click', function() {
         getMessages(folderData);
@@ -195,6 +195,7 @@ function getMessages(folderData, getBodies) {
         }
 
         let message = document.createElement('div');
+        message.className = 'link';
         message.textContent = headers.subject;
         message.addEventListener('click', function() {
           getMessage(syncKey, folderData.ServerId, headers.serverId);
