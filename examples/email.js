@@ -141,6 +141,8 @@ function getMessages(folderData, getBodies) {
            .tag(as.CollectionId, folderData.ServerId)
            .tag(as.GetChanges)
            .stag(as.Options)
+             .tag(as.FilterType, asEnum.FilterType.OneMonthBack)
+
 
     if (getBodies) {
       if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
@@ -214,6 +216,7 @@ function getMessage(syncKey, folderId, messageId) {
   let as = ActiveSyncCodepages.AirSync.Tags;
   let asEnum = ActiveSyncCodepages.AirSync.Enums;
   let asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  let asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
   let em = ActiveSyncCodepages.Email.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
