@@ -72,15 +72,52 @@
       return 'Basic ' + btoa(this._email + ':' + this._password);
     },
 
+    connect: function(aCallback) {
+      let conn = this;
+      this.autodiscover(function (aStatus) {
+        conn.options(conn.baseURL, function(aStatus, aResult) {
+          conn.connected = true;
+          conn.currentVersion = aResult.versions.slice(-1)[0];
+          conn.config.options = aResult;
+
+          if (aCallback)
+            aCallback(null, conn.config);
+        });
+      });
+    },
+
     autodiscover: function(aCallback, aNoRedirect) {
       let domain = this._email.substring(this._email.indexOf('@') + 1);
+      if (domain === 'gmail.com') {
+        this._autodiscoverGmail(aCallback);
+        return;
+      }
 
       this._autodiscover(domain, aNoRedirect, (function(aStatus, aConfig) {
         if (aStatus instanceof AutodiscoverDomainError)
           this._autodiscover('autodiscover.' + domain, aNoRedirect, aCallback);
         else
-          aCallback(aStatus);
+          aCallback(aStatus, aConfig);
       }).bind(this));
+    },
+
+    // Gmail doesn't seem to support autodiscover, so just do it manually.
+    _autodiscoverGmail: function(aCallback) {
+      this.config = {
+        user: {
+          name: '',
+          email: this._email,
+        },
+        server: {
+          type: 'MobileSync',
+          url:  'https://m.google.com',
+          name: 'https://m.google.com',
+        },
+      };
+
+      this.baseURL = this.config.server.url + '/Microsoft-Server-ActiveSync';
+      if (aCallback)
+        aCallback(null);
     },
 
     _autodiscover: function(aHost, aNoRedirect, aCallback) {
@@ -137,26 +174,20 @@
         let server = getNode('ms:Action/ms:Settings/ms:Server', responseNode);
 
         conn.config = {
-          'user': {
-            'name':  getString('ms:DisplayName/text()',  user),
-            'email': getString('ms:EMailAddress/text()', user),
+          user: {
+            name:  getString('ms:DisplayName/text()',  user),
+            email: getString('ms:EMailAddress/text()', user),
           },
-          'server': {
-            'type': getString('ms:Type/text()', server),
-            'url':  getString('ms:Url/text()',  server),
-            'name': getString('ms:Name/text()', server),
+          server: {
+            type: getString('ms:Type/text()', server),
+            url:  getString('ms:Url/text()',  server),
+            name: getString('ms:Name/text()', server),
           }
         };
 
         conn.baseURL = conn.config.server.url + '/Microsoft-Server-ActiveSync';
-        conn.options(conn.baseURL, function(aStatus, aResult) {
-          conn.connected = true;
-          conn.currentVersion = aResult.versions.slice(-1)[0];
-          conn.config.options = aResult;
-
-          if (aCallback)
-            aCallback(null, conn.config);
-        });
+        if (aCallback)
+          aCallback(null);
       };
 
       // TODO: use something like
@@ -194,7 +225,7 @@
         this._doCommandReal(aXml, aCallback);
       }
       else {
-        this.autodiscover((function (aStatus, aConfig) {
+        this.connect((function (aStatus, aConfig) {
           if (aStatus) {
             console.log(aStatus);
             aCallback(aStatus);
