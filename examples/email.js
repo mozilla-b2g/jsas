@@ -41,7 +41,7 @@ var conn;
 window.addEventListener('load', function() {
   conn = new ActiveSyncProtocol.Connection(email, password);
 
-  let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
+  const fh = ActiveSyncCodepages.FolderHierarchy.Tags;
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
   w.stag(fh.FolderSync)
      .tag(fh.SyncKey, '0')
@@ -55,9 +55,7 @@ window.addEventListener('load', function() {
       return;
     }
 
-    let fh = ActiveSyncCodepages.FolderHierarchy.Tags;
     let foldersNode = document.getElementById('folders');
-
     let e = new WBXML.EventParser();
 
     let first = true;
@@ -86,7 +84,7 @@ window.addEventListener('load', function() {
 
 let syncKeys = {};
 function getSyncKey(folderId, callback) {
-  let as = ActiveSyncCodepages.AirSync.Tags;
+  const as = ActiveSyncCodepages.AirSync.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
   w.stag(as.Sync)
@@ -131,11 +129,11 @@ function getMessages(folderId, folderName, getBodies) {
     folderNameNode.textContent = folderName;
   }
 
-  let as = ActiveSyncCodepages.AirSync.Tags;
-  let asEnum = ActiveSyncCodepages.AirSync.Enums;
-  let asb = ActiveSyncCodepages.AirSyncBase.Tags;
-  let asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
-  let em = ActiveSyncCodepages.Email.Tags;
+  const as = ActiveSyncCodepages.AirSync.Tags;
+  const asEnum = ActiveSyncCodepages.AirSync.Enums;
+  const asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  const asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
+  const em = ActiveSyncCodepages.Email.Tags;
 
   getSyncKey(folderId, function(syncKey) {
     let w = new WBXML.Writer('1.3', 1, 'UTF-8');
@@ -189,15 +187,15 @@ function getMessages(folderId, folderName, getBodies) {
         let headers = {};
 
         for (let [,child] in Iterator(node.children)) {
-          if (child.tag == as.ServerId) {
+          if (child.tag === as.ServerId) {
             headers.serverId = child.children[0].textContent;
           }
-          if (child.tag == as.ApplicationData) {
+          if (child.tag === as.ApplicationData) {
             for (let [,grandchild] in Iterator(child.children)) {
               let grandchildText = grandchild.children.length &&
                                    grandchild.children[0].textContent;
 
-              if (grandchild.tag == em.Subject)
+              if (grandchild.tag === em.Subject)
                 headers.subject = grandchildText;
             }
           }
@@ -220,11 +218,11 @@ function getMessages(folderId, folderName, getBodies) {
 function getMessage(folderId, messageId) {
   let messageNode = document.getElementById('message');
 
-  let as = ActiveSyncCodepages.AirSync.Tags;
-  let asEnum = ActiveSyncCodepages.AirSync.Enums;
-  let asb = ActiveSyncCodepages.AirSyncBase.Tags;
-  let asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
-  let em = ActiveSyncCodepages.Email.Tags;
+  const as = ActiveSyncCodepages.AirSync.Tags;
+  const asEnum = ActiveSyncCodepages.AirSync.Enums;
+  const asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  const asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
+  const em = ActiveSyncCodepages.Email.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
   w.stag(as.Sync)
@@ -272,13 +270,13 @@ function getMessage(folderId, messageId) {
                         as.Fetch, as.ApplicationData],
                        function(node) {
       for (let [,child] in Iterator(node.children)) {
-        if (child.tag == asb.Body) {
+        if (child.tag === asb.Body) {
           for (let [,grandchild] in Iterator(child.children)) {
-            if (grandchild.tag == asb.Data)
+            if (grandchild.tag === asb.Data)
               messageNode.textContent = grandchild.children[0].textContent;
           }
         }
-        else if (child.tag == em.Body) {
+        else if (child.tag === em.Body) {
           messageNode.textContent = child.children[0].textContent;
         }
       }
