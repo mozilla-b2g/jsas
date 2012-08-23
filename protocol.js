@@ -75,13 +75,21 @@
     connect: function(aCallback) {
       let conn = this;
       this.autodiscover(function (aStatus) {
+        if (aStatus) {
+          if (aCallback)
+            aCallback(aStatus, null);
+          return;
+        }
+
         conn.options(conn.baseURL, function(aStatus, aResult) {
-          conn.connected = true;
-          conn.currentVersion = aResult.versions.slice(-1)[0];
-          conn.config.options = aResult;
+          if (!aStatus) {
+            conn.connected = true;
+            conn.currentVersion = aResult.versions.slice(-1)[0];
+            conn.config.options = aResult;
+          }
 
           if (aCallback)
-            aCallback(null, conn.config);
+            aCallback(aStatus, conn.config);
         });
       });
     },
@@ -225,7 +233,7 @@
         this._doCommandReal(aXml, aCallback);
       }
       else {
-        this.connect((function (aStatus, aConfig) {
+        this.connect((function(aStatus, aConfig) {
           if (aStatus) {
             console.log(aStatus);
             aCallback(aStatus);
