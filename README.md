@@ -17,3 +17,12 @@ server address to).
 
 You'll then need to add a file named credentials.js to the root directory of
 jsas with variables named email and password, containing your account info.
+
+Sync Keys
+---------
+
+ActiveSync uses sync keys to keep track of what state the client is in. They are
+very important! FolderSync uses a global sync key, while Sync uses a separate
+sync key for each folder. When syncing, be sure to use the same FilterType for
+all sync operations in that folder; otherwise, the server will invalidate your
+sync key and force you to perform a full resync.
