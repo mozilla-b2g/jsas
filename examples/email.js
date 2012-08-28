@@ -105,7 +105,7 @@ function getSyncKey(folder, callback) {
      .stag(as.Collections)
        .stag(as.Collection)
 
-  if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
+  if (conn.currentVersion.lt('12.1'))
         w.tag(as.Class, 'Email');
 
         w.tag(as.SyncKey, '0')
@@ -153,7 +153,7 @@ function getMessages(folder, getBodies) {
        .stag(as.Collections)
          .stag(as.Collection)
 
-    if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
+    if (conn.currentVersion.lt('12.1'))
           w.tag(as.Class, 'Email');
 
           w.tag(as.SyncKey, folder.syncKey)
@@ -162,7 +162,7 @@ function getMessages(folder, getBodies) {
            .stag(as.Options)
 
     if (getBodies) {
-      if (conn.currentVersionInt >= ActiveSyncProtocol.VersionInt('12.0'))
+      if (conn.currentVersion.gte('12.0'))
             w.stag(asb.BodyPreference)
                .tag(asb.Type, asbEnum.Type.PlainText)
              .etag();
@@ -170,7 +170,7 @@ function getMessages(folder, getBodies) {
             w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
              .tag(as.MIMETruncation, asEnum.MIMETruncation.Truncate100K);
     }
-    else if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.0')) {
+    else if (conn.currentVersion.lt('12.0')) {
             w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
              .tag(as.Truncation, asEnum.MIMETruncation.TruncateAll);
     }

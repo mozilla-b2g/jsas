@@ -23,7 +23,7 @@
 }(this, function(WBXML, ASCP) {
   'use strict';
 
-  const __exports__ = ['VersionInt', 'Connection', 'AutodiscoverError',
+  const __exports__ = ['Version', 'Connection', 'AutodiscoverError',
                        'AutodiscoverDomainError'];
 
   function AutodiscoverError(message) {
@@ -50,13 +50,51 @@
     return ns[prefix] || null;
   }
 
-  function VersionInt(str) {
-    let [major, minor] = str.split('.').map(function(x) {
+  function Version(str) {
+    [this.major, this.minor] = str.split('.').map(function(x) {
       return parseInt(x);
     });
-    return (major << 16) + minor;
   }
+  Version.prototype = {
+    eq: function(other) {
+      if (!(other instanceof Version))
+        other = new Version(other);
+      return this.major === other.major && this.minor === other.minor;
+    },
+    ne: function(other) {
+      return !this.eq(other);
+    },
+    gt: function(other) {
+      if (!(other instanceof Version))
+        other = new Version(other);
+      return this.major > other.major ||
+             (this.major === other.major && this.minor > other.minor);
+    },
+    gte: function(other) {
+      if (!(other instanceof Version))
+        other = new Version(other);
+      return this.major >= other.major ||
+             (this.major === other.major && this.minor >= other.minor);
+    },
+    lt: function(other) {
+      return !this.gte(other);
+    },
+    lte: function(other) {
+      return !this.gt(other);
+    },
+    toString: function() {
+      return this.major + '.' + this.minor;
+    },
+  };
 
+  /**
+   * Create a new ActiveSync connection.
+   *
+   * @param aEmail the user's email address
+   * @param aPassword the user's password
+   * @param aDeviceId (optional) a string identifying this device
+   * @param aDeviceType (optional) a string identifying the type of this device
+   */
   function Connection(aEmail, aPassword, aDeviceId, aDeviceType) {
     this._email = aEmail;
     this._password = aPassword;
@@ -66,12 +104,17 @@
   }
 
   Connection.prototype = {
-    get currentVersionInt() { return VersionInt(this.currentVersion); },
-
     _getAuth: function() {
       return 'Basic ' + btoa(this._email + ':' + this._password);
     },
 
+    /**
+     * Perform autodiscovery and get the options for the server associated with
+     * this account.
+     *
+     * @param aCallback a callback taking an error status (if any), and the
+     *        resulting config options.
+     */
     connect: function(aCallback) {
       let conn = this;
       this.autodiscover(function (aStatus) {
@@ -94,6 +137,15 @@
       });
     },
 
+    /**
+     * Perform autodiscovery for the server associated with this account.
+     *
+     * @param aCallback a callback taking an error status (if any), and the
+     *        resulting config options
+     * @param aNoRedirect true if autodiscovery should *not* follow any
+     *        specified redirects (typically used when autodiscover has already
+     *        told us about a redirect)
+     */
     autodiscover: function(aCallback, aNoRedirect) {
       let domain = this._email.substring(this._email.indexOf('@') + 1);
       if (domain === 'gmail.com') {
@@ -129,9 +181,6 @@
     },
 
     _autodiscover: function(aHost, aNoRedirect, aCallback) {
-      // TODO: we need to be smarter here and do some stuff with redirects and
-      // other fun stuff, but this works for hotmail, so yay.
-
       let conn = this;
 
       let xhr = new XMLHttpRequest({mozSystem: true});
@@ -213,13 +262,20 @@
       xhr.send(postdata);
     },
 
+    /**
+     * Get the options for the server associated with this account.
+     *
+     * @param aCallback a callback taking an error status (if any), and the
+     *        resulting options.
+     */
     options: function(aURL, aCallback) {
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
         // TODO: handle error codes
         let result = {
-          'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
+          'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(',')
+                         .map(function(x) { return new Version(x); }),
           'commands': xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
         };
         aCallback(null, result);
@@ -228,6 +284,16 @@
       xhr.send();
     },
 
+    /**
+     * Send a command to the ActiveSync server and listen for the response.
+     *
+     * @param aCommand the WBXML representing the command or a string/tag
+     *        representing the command type for empty commands
+     * @param aCallback a callback to call when the server has responded; takes
+     *        two arguments: an error status (if any) and the response as a
+     *        WBXML reader. If the server returned an empty response, the
+     *        response argument is null.
+     */
     doCommand: function(aCommand, aCallback) {
       if (this.connected) {
         this._doCommandReal(aCommand, aCallback);
