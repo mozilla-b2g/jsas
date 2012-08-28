@@ -293,7 +293,20 @@ function getMessage(folderId, messageId, contentType) {
   });
 }
 
-function partialSync(folderId) {
+function partialSync(folderInfo) {
+  let folder;
+  for (let [,tmp] in Iterator(account.folders)) {
+    if (folderInfo === tmp.serverId ||
+        folderInfo === tmp.name) {
+      folder = tmp;
+      break;
+    }
+  }
+  if (!folder) {
+    alert("Can't find folder "+folderInfo);
+    return;
+  }
+
   const as = ActiveSyncCodepages.AirSync.Tags;
   const asEnum = ActiveSyncCodepages.AirSync.Enums;
   const asb = ActiveSyncCodepages.AirSyncBase.Tags;
@@ -302,13 +315,13 @@ function partialSync(folderId) {
 
   clearLog();
 
-  function getPartial(syncKey, callback) {
+  function getPartial() {
     let w = new WBXML.Writer('1.3', 1, 'UTF-8');
     w.stag(as.Sync)
        .stag(as.Collections)
          .stag(as.Collection)
-           .tag(as.SyncKey, syncKey)
-           .tag(as.CollectionId, folderId)
+           .tag(as.SyncKey, folder.syncKey)
+           .tag(as.CollectionId, folder.serverId)
            .tag(as.GetChanges)
            .tag(as.WindowSize, '2')
          .etag()
@@ -324,18 +337,22 @@ function partialSync(folderId) {
       }
 
       let e = new WBXML.EventParser();
+      let moreAvailable = false;
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
                          function(node) {
-        syncKeys[folderId] = node.children[0].textContent;
+        folder.syncKey = node.children[0].textContent;
+      });
+      e.addEventListener([as.Sync, as.Collections, as.Collection,
+                          as.MoreAvailable], function(node) {
+        moreAvailable = true;
       });
 
       e.run(aResponse);
-      if (callback)
-        callback(syncKeys[folderId]);
+
+      if (moreAvailable)
+        getPartial();
     });
   }
 
-  getSyncKey(folderId, function(syncKey) {
-    getPartial(syncKey, getPartial);
-  });
+  getSyncKey(folder, getPartial);
 }
