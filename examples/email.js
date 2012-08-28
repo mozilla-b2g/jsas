@@ -20,6 +20,11 @@ function log(s) {
   output.textContent += s;
 }
 
+function clearLog() {
+  let output = document.getElementById('log');
+  output.textContent = '';
+}
+
 function logWBXML(data) {
   let outgoing = data instanceof WBXML.Writer;
   let wrapper = new Array(80+1).join(outgoing ? '>' : '<');
@@ -36,6 +41,10 @@ function logWBXML(data) {
   }
   log(wrapper+'\n\n');
 }
+
+var account = {
+  folders: [],
+};
 
 var conn;
 window.addEventListener('load', function() {
@@ -64,17 +73,23 @@ window.addEventListener('load', function() {
       for (let [,child] in Iterator(node.children))
         folderData[child.localTagName] = child.children[0].textContent;
 
+      let folder = {
+        serverId: folderData.ServerId,
+        name: folderData.DisplayName,
+      };
+      account.folders.push(folder);
+
       let row = document.createElement('div');
       row.className = 'link';
-      row.textContent = folderData.DisplayName;
+      row.textContent = folder.name;
       row.addEventListener('click', function() {
-        getMessages(folderData.ServerId, folderData.DisplayName);
+        getMessages(folder);
       }, false);
       foldersNode.appendChild(row);
 
       if (first) {
         first = false;
-        getMessages(folderData.ServerId, folderData.DisplayName);
+        getMessages(folder);
       }
     });
 
@@ -82,8 +97,7 @@ window.addEventListener('load', function() {
   });
 }, false);
 
-let syncKeys = {};
-function getSyncKey(folderId, callback) {
+function getSyncKey(folder, callback) {
   const as = ActiveSyncCodepages.AirSync.Tags;
 
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
@@ -95,7 +109,7 @@ function getSyncKey(folderId, callback) {
         w.tag(as.Class, 'Email');
 
         w.tag(as.SyncKey, '0')
-         .tag(as.CollectionId, folderId)
+         .tag(as.CollectionId, folder.serverId)
        .etag()
      .etag()
    .etag();
@@ -111,23 +125,21 @@ function getSyncKey(folderId, callback) {
     let e = new WBXML.EventParser();
     e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
                        function(node) {
-      syncKeys[folderId] = node.children[0].textContent;
+      folder.syncKey = node.children[0].textContent;
     });
     e.run(aResponse);
 
-    callback(syncKeys[folderId]);
+    callback(folder);
   });
 }
 
-function getMessages(folderId, folderName, getBodies) {
+function getMessages(folder, getBodies) {
   let messagesNode = document.getElementById('messageList');
   while (messagesNode.lastChild)
     messagesNode.removeChild(messagesNode.lastChild);
 
-  if (folderName) {
-    let folderNameNode = document.getElementById('folderName');
-    folderNameNode.textContent = folderName;
-  }
+  let folderNameNode = document.getElementById('folderName');
+  folderNameNode.textContent = folder.name;
 
   const as = ActiveSyncCodepages.AirSync.Tags;
   const asEnum = ActiveSyncCodepages.AirSync.Enums;
@@ -135,7 +147,7 @@ function getMessages(folderId, folderName, getBodies) {
   const asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
   const em = ActiveSyncCodepages.Email.Tags;
 
-  getSyncKey(folderId, function(syncKey) {
+  getSyncKey(folder, function() {
     let w = new WBXML.Writer('1.3', 1, 'UTF-8');
     w.stag(as.Sync)
        .stag(as.Collections)
@@ -144,8 +156,8 @@ function getMessages(folderId, folderName, getBodies) {
     if (conn.currentVersionInt < ActiveSyncProtocol.VersionInt('12.1'))
           w.tag(as.Class, 'Email');
 
-          w.tag(as.SyncKey, syncKey)
-           .tag(as.CollectionId, folderId)
+          w.tag(as.SyncKey, folder.syncKey)
+           .tag(as.CollectionId, folder.serverId)
            .tag(as.GetChanges)
            .stag(as.Options)
 
@@ -179,7 +191,7 @@ function getMessages(folderId, folderName, getBodies) {
       let e = new WBXML.EventParser();
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
                          function(node) {
-        syncKeys[folderId] = node.children[0].textContent;
+        folder.syncKey = node.children[0].textContent;
       });
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.Commands,
                           as.Add],
@@ -213,7 +225,7 @@ function getMessages(folderId, folderName, getBodies) {
         message.className = 'link';
         message.textContent = headers.subject;
         message.addEventListener('click', function() {
-          getMessage(folderId, headers.serverId, headers.contentType);
+          getMessage(folder.serverId, headers.serverId, headers.contentType);
         }, false);
         messagesNode.appendChild(message);
       });
@@ -278,5 +290,52 @@ function getMessage(folderId, messageId, contentType) {
       messageNode.innerHTML = body;
     else
       messageNode.textContent = body;
+  });
+}
+
+function partialSync(folderId) {
+  const as = ActiveSyncCodepages.AirSync.Tags;
+  const asEnum = ActiveSyncCodepages.AirSync.Enums;
+  const asb = ActiveSyncCodepages.AirSyncBase.Tags;
+  const asbEnum = ActiveSyncCodepages.AirSyncBase.Enums;
+  const em = ActiveSyncCodepages.Email.Tags;
+
+  clearLog();
+
+  function getPartial(syncKey, callback) {
+    let w = new WBXML.Writer('1.3', 1, 'UTF-8');
+    w.stag(as.Sync)
+       .stag(as.Collections)
+         .stag(as.Collection)
+           .tag(as.SyncKey, syncKey)
+           .tag(as.CollectionId, folderId)
+           .tag(as.GetChanges)
+           .tag(as.WindowSize, '2')
+         .etag()
+       .etag()
+     .etag();
+    logWBXML(w);
+
+    conn.doCommand(w, function(aError, aResponse) {
+      logWBXML(aResponse);
+      if (aError) {
+        alert(aError)
+        return;
+      }
+
+      let e = new WBXML.EventParser();
+      e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
+                         function(node) {
+        syncKeys[folderId] = node.children[0].textContent;
+      });
+
+      e.run(aResponse);
+      if (callback)
+        callback(syncKeys[folderId]);
+    });
+  }
+
+  getSyncKey(folderId, function(syncKey) {
+    getPartial(syncKey, getPartial);
   });
 }
