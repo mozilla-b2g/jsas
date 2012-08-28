@@ -228,9 +228,9 @@
       xhr.send();
     },
 
-    doCommand: function(aXml, aCallback) {
+    doCommand: function(aCommand, aCallback) {
       if (this.connected) {
-        this._doCommandReal(aXml, aCallback);
+        this._doCommandReal(aCommand, aCallback);
       }
       else {
         this.connect((function(aStatus, aConfig) {
@@ -239,15 +239,26 @@
             aCallback(aStatus);
           }
           else {
-            this._doCommandReal(aXml, aCallback);
+            this._doCommandReal(aCommand, aCallback);
           }
         }).bind(this));
       }
     },
 
-    _doCommandReal: function(aXml, aCallback) {
-      let r = new WBXML.Reader(aXml, ASCP);
-      let commandName = r.document.next().localTagName;
+    _doCommandReal: function(aCommand, aCallback) {
+      let commandName;
+
+      if (typeof aCommand === 'string') {
+        commandName = aCommand;
+      }
+      else if (typeof aCommand === 'number') {
+        commandName = ASCP.__tagnames__[aCommand];
+      }
+      else {
+        let r = new WBXML.Reader(aCommand, ASCP);
+        commandName = r.document.next().localTagName;
+      }
+
       if (this.config.options.commands.indexOf(commandName) === -1) {
         // TODO: do something here!
         let error = new Error("This server doesn't support the command " +
@@ -272,7 +283,7 @@
       xhr.onload = function() {
         if (xhr.status == 451) {
           conn.baseURL = xhr.getResponseHeader('X-MS-Location');
-          conn.doCommand(aXml, aCallback);
+          conn.doCommand(aCommand, aCallback);
           return;
         }
 
@@ -292,7 +303,7 @@
       };
 
       xhr.responseType = 'arraybuffer';
-      xhr.send(aXml.buffer);
+      xhr.send(aCommand instanceof WBXML.Writer ? aCommand.buffer : null);
     },
   };
 
