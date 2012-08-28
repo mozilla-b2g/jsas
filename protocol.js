@@ -26,6 +26,8 @@
   const __exports__ = ['Version', 'Connection', 'AutodiscoverError',
                        'AutodiscoverDomainError'];
 
+  function nullCallback() {}
+
   function AutodiscoverError(message) {
       this.name = 'ActiveSync.AutodiscoverError';
       this.message = message || '';
@@ -117,22 +119,20 @@
      */
     connect: function(aCallback) {
       let conn = this;
-      this.autodiscover(function (aStatus) {
-        if (aStatus) {
-          if (aCallback)
-            aCallback(aStatus, null);
-          return;
-        }
+      if (!aCallback) aCallback = nullCallback;
 
-        conn.options(conn.baseURL, function(aStatus, aResult) {
-          if (!aStatus) {
+      this.autodiscover(function (aError) {
+        if (aError)
+          return aCallback(aError, null);
+
+        conn.options(conn.baseURL, function(aError, aResult) {
+          if (!aError) {
             conn.connected = true;
             conn.currentVersion = aResult.versions.slice(-1)[0];
             conn.config.options = aResult;
           }
 
-          if (aCallback)
-            aCallback(aStatus, conn.config);
+          aCallback(aError, conn.config);
         });
       });
     },
@@ -140,24 +140,24 @@
     /**
      * Perform autodiscovery for the server associated with this account.
      *
-     * @param aCallback a callback taking an error status (if any), and the
-     *        resulting config options
+     * @param aCallback a callback taking an error status (if any)
      * @param aNoRedirect true if autodiscovery should *not* follow any
      *        specified redirects (typically used when autodiscover has already
      *        told us about a redirect)
      */
     autodiscover: function(aCallback, aNoRedirect) {
+      if (!aCallback) aCallback = nullCallback;
       let domain = this._email.substring(this._email.indexOf('@') + 1);
       if (domain === 'gmail.com') {
         this._autodiscoverGmail(aCallback);
         return;
       }
 
-      this._autodiscover(domain, aNoRedirect, (function(aStatus, aConfig) {
-        if (aStatus instanceof AutodiscoverDomainError)
+      this._autodiscover(domain, aNoRedirect, (function(aError) {
+        if (aError instanceof AutodiscoverDomainError)
           this._autodiscover('autodiscover.' + domain, aNoRedirect, aCallback);
         else
-          aCallback(aStatus, aConfig);
+          aCallback(aError);
       }).bind(this));
     },
 
@@ -176,12 +176,12 @@
       };
 
       this.baseURL = this.config.server.url + '/Microsoft-Server-ActiveSync';
-      if (aCallback)
-        aCallback(null);
+      aCallback(null);
     },
 
     _autodiscover: function(aHost, aNoRedirect, aCallback) {
       let conn = this;
+      if (!aCallback) aCallback = nullCallback;
 
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('POST', 'https://' + aHost + '/autodiscover/autodiscover.xml',
@@ -243,8 +243,7 @@
         };
 
         conn.baseURL = conn.config.server.url + '/Microsoft-Server-ActiveSync';
-        if (aCallback)
-          aCallback(null);
+        aCallback(null);
       };
 
       // TODO: use something like
@@ -269,10 +268,16 @@
      *        resulting options.
      */
     options: function(aURL, aCallback) {
+      if (!aCallback) aCallback = nullCallback;
+
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
-        // TODO: handle error codes
+        if (xhr.status != 200) {
+          aCallback(new Error('Unable to get server options'));
+          return;
+        }
+
         let result = {
           'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(',')
                          .map(function(x) { return new Version(x); }),
@@ -295,15 +300,15 @@
      *        response argument is null.
      */
     doCommand: function(aCommand, aCallback) {
+      if (!aCallback) aCallback = nullCallback;
+
       if (this.connected) {
         this._doCommandReal(aCommand, aCallback);
       }
       else {
-        this.connect((function(aStatus, aConfig) {
-          if (aStatus) {
-            console.log(aStatus);
-            aCallback(aStatus);
-          }
+        this.connect((function(aError, aConfig) {
+          if (aError)
+            aCallback(aError);
           else {
             this._doCommandReal(aCommand, aCallback);
           }
