@@ -164,7 +164,8 @@
         });
       }
       else if (conn._connection === 4) {
-        aCallback(null, this.config);
+        if (aCallback)
+          aCallback(null, this.config);
       }
     },
 
