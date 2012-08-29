@@ -102,12 +102,23 @@
     this._password = aPassword;
     this._deviceId = aDeviceId || 'v140Device';
     this._deviceType = aDeviceType || 'SmartPhone';
-    this.connected = false;
+    this._connection = 0;
+    this._connectionCallbacks = [];
   }
 
   Connection.prototype = {
     _getAuth: function() {
       return 'Basic ' + btoa(this._email + ':' + this._password);
+    },
+
+    _doCallbacks: function() {
+      for (let [,callback] in Iterator(this._connectionCallbacks))
+        callback.apply(callback, arguments);
+      this._connectionCallbacks = [];
+    },
+
+    get connected() {
+      return this._connection === 4;
     },
 
     /**
@@ -119,22 +130,42 @@
      */
     connect: function(aCallback) {
       let conn = this;
-      if (!aCallback) aCallback = nullCallback;
+      if (aCallback && conn._connection !== 4)
+        this._connectionCallbacks.push(aCallback);
 
-      this.autodiscover(function (aError) {
-        if (aError)
-          return aCallback(aError, null);
+      if (conn._connection === 0) {
+        conn._connection = 1;
+        conn.autodiscover(function (aError, aConfig) {
+          if (aError) {
+            conn._connection = 0;
+            return conn._doCallbacks(aError, null);
+          }
 
+          conn._connection = 2;
+          conn.config = aConfig;
+          conn.baseURL = conn.config.server.url +
+            '/Microsoft-Server-ActiveSync';
+          conn.connect();
+        });
+      }
+      else if (conn._connection === 2) {
+        conn._connection = 3;
         conn.options(conn.baseURL, function(aError, aResult) {
-          if (!aError) {
-            conn.connected = true;
-            conn.currentVersion = aResult.versions.slice(-1)[0];
+          if (aError) {
+            conn._connection = 2;
+          }
+          else {
+            conn._connection = 4;
+            conn.currentVersion = new Version(aResult.versions.slice(-1)[0]);
             conn.config.options = aResult;
           }
 
-          aCallback(aError, conn.config);
+          conn._doCallbacks(aError, conn.config);
         });
-      });
+      }
+      else if (conn._connection === 4) {
+        aCallback(null, this.config);
+      }
     },
 
     /**
@@ -149,34 +180,65 @@
       if (!aCallback) aCallback = nullCallback;
       let domain = this._email.substring(this._email.indexOf('@') + 1);
       if (domain === 'gmail.com') {
-        this._autodiscoverGmail(aCallback);
+        aCallback(null, this._fillConfig('https://m.google.com'));
         return;
       }
 
-      this._autodiscover(domain, aNoRedirect, (function(aError) {
+      this._autodiscover(domain, aNoRedirect, (function(aError, aConfig) {
         if (aError instanceof AutodiscoverDomainError)
           this._autodiscover('autodiscover.' + domain, aNoRedirect, aCallback);
         else
-          aCallback(aError);
+          aCallback(aError, aConfig);
       }).bind(this));
     },
 
-    // Gmail doesn't seem to support autodiscover, so just do it manually.
-    _autodiscoverGmail: function(aCallback) {
-      this.config = {
+    setConfig: function(aConfig) {
+      this.config = this._fillConfig(aConfig);
+      this.baseURL = this.config.server.url + '/Microsoft-Server-ActiveSync';
+
+      if (this.config.options) {
+        this._connection = 4;
+        let versionStr = this.config.options.versions.slice(-1)[0];
+        this.currentVersion = new Version(versionStr);
+      }
+      else {
+        this._connection = 2;
+      }
+    },
+
+    _fillConfig: function(aConfig) {
+      let config = {
         user: {
           name: '',
           email: this._email,
         },
         server: {
           type: 'MobileSync',
-          url:  'https://m.google.com',
-          name: 'https://m.google.com',
+          url: null,
+          name: null,
         },
       };
 
-      this.baseURL = this.config.server.url + '/Microsoft-Server-ActiveSync';
-      aCallback(null);
+      if (typeof aConfig === 'string') {
+        config.server.url = config.server.name = aConfig;
+      }
+      else {
+        let deepCopy = function(src, dest) {
+          for (let k in src) {
+            if (typeof src[k] === 'object') {
+              dest[k] = Array.isArray(src[k]) ? [] : {};
+              deepCopy(src[k], dest[k]);
+            }
+            else {
+              dest[k] = src[k];
+            }
+          }
+        };
+
+        deepCopy(aConfig, config);
+      }
+
+      return config;
     },
 
     _autodiscover: function(aHost, aNoRedirect, aCallback) {
@@ -230,7 +292,7 @@
         let user = getNode('ms:User', responseNode);
         let server = getNode('ms:Action/ms:Settings/ms:Server', responseNode);
 
-        conn.config = {
+        let config = {
           user: {
             name:  getString('ms:DisplayName/text()',  user),
             email: getString('ms:EMailAddress/text()', user),
@@ -242,8 +304,7 @@
           }
         };
 
-        conn.baseURL = conn.config.server.url + '/Microsoft-Server-ActiveSync';
-        aCallback(null);
+        aCallback(null, config);
       };
 
       // TODO: use something like
@@ -269,7 +330,10 @@
      */
     options: function(aURL, aCallback) {
       if (!aCallback) aCallback = nullCallback;
+      if (this._connection < 2)
+        throw new Error('Must have server info before calling options()');
 
+      let conn = this;
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
@@ -279,10 +343,10 @@
         }
 
         let result = {
-          'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(',')
-                         .map(function(x) { return new Version(x); }),
+          'versions': xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
           'commands': xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
         };
+
         aCallback(null, result);
       };
 

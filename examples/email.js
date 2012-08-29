@@ -49,7 +49,12 @@ var account = {
 var conn;
 window.addEventListener('load', function() {
   conn = new ActiveSyncProtocol.Connection(email, password);
+  if (email.split('@')[1] === 'hotmail.com')
+    conn.setConfig('https://m.hotmail.com');
+  conn.connect(getFolders);
+}, false);
 
+function getFolders() {
   const fh = ActiveSyncCodepages.FolderHierarchy.Tags;
   let w = new WBXML.Writer('1.3', 1, 'UTF-8');
   w.stag(fh.FolderSync)
@@ -95,7 +100,7 @@ window.addEventListener('load', function() {
 
     e.run(aResponse);
   });
-}, false);
+}
 
 function getSyncKey(folder, callback) {
   const as = ActiveSyncCodepages.AirSync.Tags;
