@@ -107,16 +107,29 @@
   }
 
   Connection.prototype = {
+    /**
+     * Get the auth string to add to our XHR's headers.
+     *
+     * @return the auth string
+     */
     _getAuth: function() {
       return 'Basic ' + btoa(this._email + ':' + this._password);
     },
 
+    /**
+     * Perform any callbacks added during the connection process.
+     */
     _doCallbacks: function() {
       for (let [,callback] in Iterator(this._connectionCallbacks))
         callback.apply(callback, arguments);
       this._connectionCallbacks = [];
     },
 
+    /**
+     * Get the connection status.
+     *
+     * @return true iff we are fully connected to the server
+     */
     get connected() {
       return this._connection === 4;
     },
@@ -172,7 +185,8 @@
     /**
      * Perform autodiscovery for the server associated with this account.
      *
-     * @param aCallback a callback taking an error status (if any)
+     * @param aCallback a callback taking an error status (if any) and the
+     *        server's configuration
      * @param aNoRedirect true if autodiscovery should *not* follow any
      *        specified redirects (typically used when autodiscover has already
      *        told us about a redirect)
@@ -193,6 +207,15 @@
       }).bind(this));
     },
 
+    /**
+     * Manually set the configuration for the connection.
+     *
+     * @param aConfig a string representing the base URL for commands or an
+     *        object holding the configuration data. In the latter case, if the
+     *        |options| key is specified, we will treat ourselves as fully
+     *        connected; otherwise, we will count as having performed
+     *        autodiscovery but not options detection.
+     */
     setConfig: function(aConfig) {
       this.config = this._fillConfig(aConfig);
       this.baseURL = this.config.server.url + '/Microsoft-Server-ActiveSync';
@@ -207,6 +230,13 @@
       }
     },
 
+    /**
+     * Fill out the configuration for the connection.
+     *
+     * @param aConfig a string representing the base URL for commands or an
+     *        object holding the configuration data
+     * @return the properly-formed configuration object
+     */
     _fillConfig: function(aConfig) {
       let config = {
         user: {
@@ -242,6 +272,16 @@
       return config;
     },
 
+    /**
+     * Perform the actual autodiscovery process for a given URL.
+     *
+     * @param aHost the host name to attempt autodiscovery for
+     * @param aNoRedirect true if autodiscovery should *not* follow any
+     *        specified redirects (typically used when autodiscover has already
+     *        told us about a redirect)
+     * @param aCallback a callback taking an error status (if any) and the
+     *        server's configuration
+     */
     _autodiscover: function(aHost, aNoRedirect, aCallback) {
       let conn = this;
       if (!aCallback) aCallback = nullCallback;
@@ -381,6 +421,17 @@
       }
     },
 
+    /**
+     * Perform the actual process of sending a command to the ActiveSync server
+     * and getting the response.
+     *
+     * @param aCommand the WBXML representing the command or a string/tag
+     *        representing the command type for empty commands
+     * @param aCallback a callback to call when the server has responded; takes
+     *        two arguments: an error status (if any) and the response as a
+     *        WBXML reader. If the server returned an empty response, the
+     *        response argument is null.
+     */
     _doCommandReal: function(aCommand, aCallback) {
       let commandName;
 
