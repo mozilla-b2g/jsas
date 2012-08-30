@@ -378,7 +378,7 @@
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', aURL, true);
       xhr.onload = function() {
-        if (xhr.status != 200) {
+        if (xhr.status !== 200) {
           aCallback(new Error('Unable to get server options'));
           return;
         }
@@ -468,13 +468,13 @@
 
       let conn = this;
       xhr.onload = function() {
-        if (xhr.status == 451) {
+        if (xhr.status === 451) {
           conn.baseURL = xhr.getResponseHeader('X-MS-Location');
           conn.doCommand(aCommand, aCallback);
           return;
         }
 
-        if (xhr.status != 200) {
+        if (xhr.status !== 200) {
           // TODO: do something here!
           let error = new Error('ActiveSync command returned failure ' +
                                 'response ' + xhr.status);
