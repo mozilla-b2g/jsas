@@ -23,7 +23,7 @@ ios = Components.classes["@mozilla.org/network/io-service;1"]
                 .getService(Components.interfaces.nsIIOService);
 uri = ios.newURI(host, null, null);
 perm.add(uri, 'systemXHR', 1);
-'Successfully added systemXHR permissions for '+host
+'Successfully added systemXHR permissions for '+host;
 ```
 
 You'll then need to add a file named credentials.js to the root directory of
