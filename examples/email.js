@@ -49,9 +49,14 @@ var account = {
 var conn;
 window.addEventListener('load', function() {
   conn = new ActiveSyncProtocol.Connection(email, password);
-  if (email.split('@')[1] === 'hotmail.com')
-    conn.setConfig('https://m.hotmail.com');
-  conn.connect(getFolders);
+  conn.connect(function(aError) {
+    if (aError) {
+      alert(aError);
+      return;
+    }
+
+    getFolders();
+  });
 }, false);
 
 function getFolders() {

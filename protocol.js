@@ -24,23 +24,31 @@
   'use strict';
 
   const __exports__ = ['Version', 'Connection', 'AutodiscoverError',
-                       'AutodiscoverDomainError'];
+                       'AutodiscoverDomainError', 'HttpError'];
 
   function nullCallback() {}
 
   function AutodiscoverError(message) {
-      this.name = 'ActiveSync.AutodiscoverError';
-      this.message = message || '';
+    this.name = 'ActiveSync.AutodiscoverError';
+    this.message = message || '';
   }
   AutodiscoverError.prototype = new Error();
   AutodiscoverError.prototype.constructor = AutodiscoverError;
 
   function AutodiscoverDomainError(message) {
-      this.name = 'ActiveSync.AutodiscoverDomainError';
-      this.message = message || '';
+    this.name = 'ActiveSync.AutodiscoverDomainError';
+    this.message = message || '';
   }
   AutodiscoverDomainError.prototype = new AutodiscoverError();
   AutodiscoverDomainError.prototype.constructor = AutodiscoverDomainError;
+
+  function HttpError(message, status) {
+    this.name = 'ActiveSync.HttpError';
+    this.message = message || '';
+    this.status = status || 0;
+  }
+  HttpError.prototype = new Error();
+  HttpError.prototype.constructor = HttpError;
 
   function nsResolver(prefix) {
     const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
@@ -199,6 +207,9 @@
         return;
       }
 
+      // The first time we try autodiscovery, we should try to recover from
+      // AutodiscoverDomainErrors. The second time, *all* errors should be
+      // reported to the callback.
       this._autodiscover(domain, aNoRedirect, (function(aError, aConfig) {
         if (aError instanceof AutodiscoverDomainError)
           this._autodiscover('autodiscover.' + domain, aNoRedirect, aCallback);
@@ -293,6 +304,9 @@
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
+        if (xhr.status === 401 || xhr.status === 403)
+          return aCallback(new HttpError(xhr.statusText, xhr.status));
+
         let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
 
         function getNode(xpath, rel) {
