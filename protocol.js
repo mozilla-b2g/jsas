@@ -140,7 +140,10 @@
     /**
      * Perform any callbacks added during the connection process.
      */
-    _doCallbacks: function() {
+    _notifyConnected: function() {
+      if (arguments[0]) // Error status
+        this.disconnect();
+
       for (let [,callback] in Iterator(this._connectionCallbacks))
         callback.apply(callback, arguments);
       this._connectionCallbacks = [];
@@ -192,7 +195,7 @@
           conn._waitingForConnection = false;
 
           if (aError)
-            return conn._doCallbacks(aError, aConfig);
+            return conn._notifyConnected(aError, aConfig);
 
           // Try to find a MobileSync server from Autodiscovery.
           for (let [,server] in Iterator(aConfig.servers)) {
@@ -203,7 +206,7 @@
           }
           if (!aConfig.selectedServer) {
             conn._connection = 0;
-            return conn._doCallbacks(
+            return conn._notifyConnected(
               new AutodiscoverError('No MobileSync server found'), aConfig);
           }
 
@@ -221,7 +224,7 @@
           conn._waitingForConnection = false;
 
           if (aError)
-            return conn._doCallbacks(aError, aConfig, aOptions);
+            return conn._notifyConnected(aError, aConfig, aOptions);
 
           conn._connection = 2;
           conn.versions = aOptions.versions;
@@ -229,15 +232,31 @@
           conn.currentVersion = new Version(aOptions.versions.slice(-1)[0]);
 
           if (!conn.supportsCommand('Provision'))
-            return conn._doCallbacks(null, aConfig, aOptions);
+            return conn._notifyConnected(null, aConfig, aOptions);
 
           conn.provision(function (aError, aResponse) {
-            conn._doCallbacks(aError, aConfig, aOptions);
+            conn._notifyConnected(aError, aConfig, aOptions);
           });
         });
       }
 
       getAutodiscovery();
+    },
+
+    /**
+     * Disconnect from the ActiveSync server, and reset all local state.
+     */
+    disconnect: function() {
+      if (this._waitingForConnection)
+        throw new Error("Can't disconnect while waiting for server response");
+
+      this._connection = 0;
+
+      this.baseUrl = null;
+
+      this.versions = [];
+      this.supportedCommands = [];
+      this.currentVersion = null;
     },
 
     /**
