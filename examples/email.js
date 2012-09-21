@@ -49,12 +49,13 @@ var account = {
 var conn;
 window.addEventListener('load', function() {
   conn = new ActiveSyncProtocol.Connection(email, password);
-  conn.connect(function(aError) {
+  conn.connect(function(aError, aConfig, aOptions) {
     if (aError) {
       alert(aError);
       return;
     }
 
+    log('Connected to ' + aConfig.selectedServer.url + '\n');
     getFolders();
   });
 }, false);

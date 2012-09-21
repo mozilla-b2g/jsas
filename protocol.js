@@ -175,13 +175,15 @@
         return;
 
       function getAutodiscovery() {
-        // Check for hardcoded domains first
+        // Check for hardcoded domains first.
         let domain = conn._emailDomain.toLowerCase();
         if (domain in hardcodedDomains)
           conn.setServer(hardcodedDomains[domain]);
 
         if (conn._connection === 1) {
-          getOptions();
+          // Pass along minimal configuration info.
+          getOptions({ forced: true,
+                       selectedServer: { url: conn._forcedServer } });
           return;
         }
 
@@ -193,20 +195,19 @@
             return conn._doCallbacks(aError, aConfig);
 
           // Try to find a MobileSync server from Autodiscovery.
-          let server;
-          for (let [,candidateServer] in Iterator(aConfig.servers)) {
-            if (candidateServer.type === 'MobileSync') {
-              server = candidateServer;
+          for (let [,server] in Iterator(aConfig.servers)) {
+            if (server.type === 'MobileSync') {
+              aConfig.selectedServer = server;
               break;
             }
           }
-          if (!server) {
+          if (!aConfig.selectedServer) {
             conn._connection = 0;
             return conn._doCallbacks(
               new AutodiscoverError('No MobileSync server found'), aConfig);
           }
 
-          conn.setServer(server.url);
+          conn.setServer(aConfig.selectedServer.url);
           getOptions(aConfig);
         });
       }
@@ -285,6 +286,7 @@
      * @param aConfig a string representing the server URL for commands.
      */
     setServer: function(aServer) {
+      this._forcedServer = aServer;
       this.baseUrl = aServer + '/Microsoft-Server-ActiveSync';
       this._connection = 1;
     },
