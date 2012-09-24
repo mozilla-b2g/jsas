@@ -139,9 +139,11 @@
 
     /**
      * Perform any callbacks added during the connection process.
+     *
+     * @param aError the error status (if any)
      */
-    _notifyConnected: function() {
-      if (arguments[0]) // Error status
+    _notifyConnected: function(aError) {
+      if (aError)
         this.disconnect();
 
       for (let [,callback] in Iterator(this._connectionCallbacks))
