@@ -23,8 +23,7 @@
 }(this, function(WBXML, ASCP) {
   'use strict';
 
-  const __exports__ = ['Version', 'Connection', 'AutodiscoverError',
-                       'AutodiscoverDomainError', 'HttpError'];
+  var exports = {};
 
   function nullCallback() {}
 
@@ -32,6 +31,7 @@
     this.name = 'ActiveSync.AutodiscoverError';
     this.message = message || '';
   }
+  exports.AutodiscoverError = AutodiscoverError;
   AutodiscoverError.prototype = new Error();
   AutodiscoverError.prototype.constructor = AutodiscoverError;
 
@@ -39,6 +39,7 @@
     this.name = 'ActiveSync.AutodiscoverDomainError';
     this.message = message || '';
   }
+  exports.AutodiscoverDomainError = AutodiscoverDomainError;
   AutodiscoverDomainError.prototype = new AutodiscoverError();
   AutodiscoverDomainError.prototype.constructor = AutodiscoverDomainError;
 
@@ -47,6 +48,7 @@
     this.message = message || '';
     this.status = status || 0;
   }
+  exports.HttpError = HttpError;
   HttpError.prototype = new Error();
   HttpError.prototype.constructor = HttpError;
 
@@ -65,6 +67,7 @@
       return parseInt(x);
     });
   }
+  exports.Version = Version;
   Version.prototype = {
     eq: function(other) {
       if (!(other instanceof Version))
@@ -122,7 +125,7 @@
     this._waitingForConnection = false;
     this._connectionCallbacks = [];
   }
-
+  exports.Connection = Connection;
   Connection.prototype = {
     /**
      * Get the auth string to add to our XHR's headers.
@@ -562,8 +565,5 @@
     },
   };
 
-  let exported = {};
-  for (let [,exp] in Iterator(__exports__))
-    exported[exp] = eval(exp);
-  return exported;
+  return exports;
 }));
