@@ -392,7 +392,7 @@
 
         let servers = getNodes('ms:Action/ms:Settings/ms:Server', responseNode);
         let server;
-        while (server = servers.iterateNext()) {
+        while ((server = servers.iterateNext())) {
           config.servers.push({
             type:       getString('ms:Type/text()',       server),
             url:        getString('ms:Url/text()',        server),
@@ -402,6 +402,10 @@
         }
 
         aCallback(null, config);
+      };
+
+      xhr.onerror = function() {
+        aCallback(new Error('Error getting Autodiscover URL'));
       };
 
       // TODO: use something like
@@ -433,6 +437,7 @@
       let conn = this;
       let xhr = new XMLHttpRequest({mozSystem: true});
       xhr.open('OPTIONS', this.baseUrl, true);
+
       xhr.onload = function() {
         if (xhr.status !== 200) {
           console.log('ActiveSync options request failed with response ' +
@@ -447,6 +452,10 @@
         };
 
         aCallback(null, result);
+      };
+
+      xhr.onerror = function() {
+        aCallback(new Error('Error getting OPTIONS URL'));
       };
 
       xhr.send();
@@ -558,6 +567,10 @@
         if (xhr.response.byteLength > 0)
           response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
         aCallback(null, response);
+      };
+
+      xhr.onerror = function() {
+        aCallback(new Error('Error getting command URL'));
       };
 
       xhr.responseType = 'arraybuffer';
