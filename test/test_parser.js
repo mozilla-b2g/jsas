@@ -13,9 +13,6 @@
  * limitations under the License.
  */
 
-// Currently, the following is just copied from jswbxml. We should handle it in
-// a better way later.
-
 'use strict';
 
 function binify(src) {

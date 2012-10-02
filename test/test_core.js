@@ -168,21 +168,50 @@ function verify_subdocument(actual, expected) {
 }
 
 window.addEventListener('load', function() {
-  let pass = 0, fail = 0;
-  for (let i in window) {
-    if (i.match(/^test_/)) {
-      try {
-        window[i]();
-        print(i + ' PASSED\n');
-        pass++;
-      }
-      catch(e) {
-        print(i + ' FAILED: ' + e + '\n');
-        print(e.stack.replace(/^(.)/mg, '  $1'));
-        fail++;
-      }
+  let pass = 0, fail = 0, waiting = 0, done = false;
+
+  function onTestComplete(funcName, error) {
+    if (!error) {
+      print(funcName + ' PASSED\n');
+      pass++;
+    }
+    else {
+      print(funcName + ' FAILED: ' + error + '\n');
+      print(error.stack.replace(/^(.)/mg, '  $1'));
+      fail++;
     }
   }
 
-  print('\nPassed: ' + pass + ' Failed: ' + fail + '\n');
+  function onAsyncTestComplete(funcName, error) {
+    onTestComplete(funcName, error);
+    waiting--;
+    if (waiting === 0 && done)
+      summarize();
+  }
+
+  function summarize() {
+    print('\nPassed: ' + pass + ' Failed: ' + fail + '\n');
+  }
+
+  for (let funcName in window) {
+    if (funcName.match(/^test_/)) {
+      if (funcName.match(/^test_async_/)) {
+        window[funcName](onAsyncTestComplete.bind(null, funcName));
+        waiting++;
+      }
+      else {
+        try {
+          window[funcName]();
+          onTestComplete(funcName);
+        }
+        catch(error) {
+          onTestComplete(funcName, error);
+        }
+      }
+    }
+  }
+  done = true;
+
+  if (!waiting)
+    summarize();
 }, false);
