@@ -31,99 +31,6 @@ function binify(src) {
   return dest;
 }
 
-function print(s) {
-  let output = document.getElementById('output');
-  output.textContent += s;
-}
-
-function assert(expr, reason) {
-  if (!expr)
-    throw new Error(reason);
-}
-
-function assert_equals(a, b, reason) {
-  assert(a == b, reason ? reason : a + ' should be equal to ' + b);
-}
-
-function assert_throws(f, type) {
-  let threw = false;
-  try {
-    f();
-  }
-  catch (e if !type || e instanceof type) {
-    threw = true;
-  }
-  if (!threw)
-    throw new Error('exception expected, but not found');
-}
-
-/**
- * Zip some iterators together to walk through them in lock-step.
- */
-function zip() {
-  while (true) {
-    let ends = 0;
-    let step = []
-    for (let i = 0; i < arguments.length; i++) {
-      try {
-        step.push(arguments[i].next());
-      } catch (e if e instanceof StopIteration) {
-        ends++;
-      }
-    }
-    if (ends == arguments.length)
-      throw StopIteration;
-    else if (ends != 0)
-      throw new Error('Zipped iterators have differing lengths!');
-
-    yield step;
-  }
-}
-
-function verify_wbxml(reader, expectedVersion, expectedPid, expectedCharset,
-                      expectedNodes) {
-  assert_equals(reader.version, expectedVersion);
-  assert_equals(reader.pid, expectedPid);
-  assert_equals(reader.charset, expectedCharset);
-
-  for (let [node, expected] in
-       zip( reader.document, (expectedNodes[i] for (i in expectedNodes)) )) {
-    assert_equals(node.type, expected.type);
-
-    switch (node.type) {
-    case 'STAG':
-    case 'TAG':
-      assert_equals(node.tag, expected.tag);
-      assert_equals(node.localTag, expected.tag && (expected.tag & 0xff));
-      assert_equals(node.namespace, expected.tag && (expected.tag >> 8));
-
-      assert_equals(node.localTagName, expected.localTagName);
-
-      for (let [name, value] in node.attributes)
-        assert_equals(value, expected.attributes[name]);
-
-      if (expected.attributes) {
-        for (let [name, value] in Iterator(expected.attributes))
-          assert_equals(value, node.getAttribute(name));
-      }
-      break;
-    case 'TEXT':
-      assert_equals(node.textContent, expected.textContent);
-      break;
-    case 'PI':
-      assert_equals(node.target, expected.target);
-      assert_equals(node.data, expected.data);
-      break;
-    case 'EXT':
-      assert_equals(node.subtype, expected.subtype);
-      assert_equals(node.index, expected.index);
-      assert_equals(node.value, expected.value);
-      break;
-    case 'OPAQUE':
-      assert_equals(node.data, expected.data);
-    }
-  }
-}
 
 // http://msdn.microsoft.com/en-us/library/ee237245%28v=exchg.80%29
 function test_activesync_example() {
@@ -197,25 +104,5 @@ function test_activesync_example() {
   ];
 
   let r = new WBXML.Reader(data, ActiveSyncCodepages);
-  verify_wbxml(r, '1.3', 1, 'UTF-8', expectedNodes);
+  verify_document(r, '1.3', 1, 'UTF-8', expectedNodes);
 }
-
-window.addEventListener('load', function() {
-  let pass = 0, fail = 0;
-  for (let i in window) {
-    if (i.match(/^test_/)) {
-      try {
-        window[i]();
-        print(i + ' PASSED\n');
-        pass++;
-      }
-      catch(e) {
-        print(i + ' FAILED: ' + e + '\n');
-        print(e.stack.replace(/^(.)/mg, '  $1'));
-        fail++;
-      }
-    }
-  }
-
-  print('\nPassed: ' + pass + ' Failed: ' + fail + '\n');
-}, false);
