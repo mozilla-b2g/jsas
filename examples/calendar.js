@@ -103,7 +103,7 @@ window.addEventListener('load', function() {
     w.stag(fh.FolderSync).tag(fh.SyncKey, '0').etag();
     logWBXML(w);
 
-    conn.doCommand(w, function(aError, aResponse) {
+    conn.postCommand(w, function(aError, aResponse) {
       const enums = ActiveSyncCodepages.FolderHierarchy.Enums;
 
       let e = new WBXML.EventParser();
@@ -133,7 +133,7 @@ window.addEventListener('load', function() {
 
           let w = makeSync(calendarFolderId, folderData.SyncKey);
   
-          conn.doCommand(w, function(aError, aResponse) {
+          conn.postCommand(w, function(aError, aResponse) {
             logWBXML(aResponse);
             if (aError) {
               alert(aError)
@@ -147,7 +147,7 @@ window.addEventListener('load', function() {
               let calendarSyncKey = node.children[0].textContent;
               let w = makeSync(calendarFolderId, calendarSyncKey);
   
-              conn.doCommand(w, function(aError, aResponse) {
+              conn.postCommand(w, function(aError, aResponse) {
                 logWBXML(aResponse);
                 if (aError) {
                   alert(aError)

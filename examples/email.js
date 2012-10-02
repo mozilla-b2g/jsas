@@ -68,7 +68,7 @@ function getFolders() {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aError, aResponse) {
+  conn.postCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
     if (aError) {
       alert(aError)
@@ -126,7 +126,7 @@ function getSyncKey(folder, callback) {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aError, aResponse) {
+  conn.postCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
     if (aError) {
       alert(aError)
@@ -192,7 +192,7 @@ function getMessages(folder, getBodies) {
      .etag();
     logWBXML(w);
 
-    conn.doCommand(w, function(aError, aResponse) {
+    conn.postCommand(w, function(aError, aResponse) {
       logWBXML(aResponse);
       if (aError) {
         alert(aError)
@@ -271,7 +271,7 @@ function getMessage(folderId, messageId, contentType) {
    .etag();
   logWBXML(w);
 
-  conn.doCommand(w, function(aError, aResponse) {
+  conn.postCommand(w, function(aError, aResponse) {
     logWBXML(aResponse);
     if (aError) {
       alert(aError)
@@ -340,7 +340,7 @@ function partialSync(folderInfo) {
      .etag();
     logWBXML(w);
 
-    conn.doCommand(w, function(aError, aResponse) {
+    conn.postCommand(w, function(aError, aResponse) {
       logWBXML(aResponse);
       if (aError) {
         alert(aError)
