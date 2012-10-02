@@ -15,15 +15,42 @@
 
 'use strict';
 
-function test_async_autodiscover(callback) {
-  let conn = new ActiveSyncProtocol.Connection(email, password);
+function test_async_autodiscover_hotmail(callback) {
+  let conn = new ActiveSyncProtocol.Connection(TEST_HOTMAIL_USERNAME,
+                                               TEST_HOTMAIL_PASSWORD);
   conn.connect(function(aError, aConfig, aOptions) {
-    callback(aError);
+    if (aError)
+      callback(aError);
+    else
+      subtest_async_autodiscover_hotmail_badpass(callback);
   });
 }
 
-function test_async_autodiscover_badpass(callback) {
-  let conn = new ActiveSyncProtocol.Connection(email, 'notmypassword!');
+function subtest_async_autodiscover_hotmail_badpass(callback) {
+  let conn = new ActiveSyncProtocol.Connection(TEST_HOTMAIL_USERNAME,
+                                               TEST_HOTMAIL_BAD_PASSWORD);
+  conn.connect(function(aError, aConfig, aOptions) {
+    if (aError)
+      callback(null);
+    else
+      callback(new Error('Autodiscover should have failed!'));
+  });
+}
+
+function test_async_autodiscover_gmail(callback) {
+  let conn = new ActiveSyncProtocol.Connection(TEST_GMAIL_USERNAME,
+                                               TEST_GMAIL_PASSWORD);
+  conn.connect(function(aError, aConfig, aOptions) {
+    if (aError)
+      callback(aError);
+    else
+      subtest_async_autodiscover_gmail_badpass(callback);
+  });
+}
+
+function subtest_async_autodiscover_gmail_badpass(callback) {
+  let conn = new ActiveSyncProtocol.Connection(TEST_GMAIL_USERNAME,
+                                               TEST_GMAIL_BAD_PASSWORD);
   conn.connect(function(aError, aConfig, aOptions) {
     if (aError)
       callback(null);
