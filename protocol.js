@@ -586,6 +586,10 @@
       let conn = this;
       let parentArgs = arguments;
       xhr.onload = function() {
+        // This status code is a proprietary Microsoft extension used to
+        // indicate a redirect, not to be confused with the draft-standard
+        // "Unavailable For Legal Reasons" status. More info available here:
+        // <http://msdn.microsoft.com/en-us/library/gg651019.aspx>
         if (xhr.status === 451) {
           conn.baseUrl = xhr.getResponseHeader('X-MS-Location');
           conn.postData.apply(conn, parentArgs);
