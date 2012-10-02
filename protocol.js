@@ -308,7 +308,7 @@
       let w = new WBXML.Writer('1.3', 1, 'UTF-8');
       w.stag(pv.Provision)
         .etag();
-      this.doCommand(w, aCallback);
+      this.postCommand(w, aCallback);
     },
 
     /**
