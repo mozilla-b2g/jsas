@@ -343,10 +343,17 @@
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
-        if (xhr.status === 401 || xhr.status === 403)
+        if (xhr.status !== 200)
           return aCallback(new HttpError(xhr.statusText, xhr.status));
 
-        let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
+        let doc;
+        try {
+          doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
+        }
+        catch (ex) {
+          return aCallback(new AutodiscoverDomainError(
+            'Badly formed XML: ' + ex));
+        }
 
         function getNode(xpath, rel) {
           return doc.evaluate(xpath, rel, nsResolver,
