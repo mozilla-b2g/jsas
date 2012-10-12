@@ -343,7 +343,7 @@
       xhr.setRequestHeader('Authorization', this._getAuth());
 
       xhr.onload = function() {
-        if (xhr.status === 401 || xhr.status === 403)
+        if (xhr.status < 200 || xhr.status >= 300)
           return aCallback(new HttpError(xhr.statusText, xhr.status));
 
         let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
@@ -446,7 +446,7 @@
       xhr.open('OPTIONS', this.baseUrl, true);
 
       xhr.onload = function() {
-        if (xhr.status !== 200) {
+        if (xhr.status < 200 || xhr.status >= 300) {
           console.log('ActiveSync options request failed with response ' +
                       xhr.status);
           aCallback(new HttpError(xhr.statusText, xhr.status));
@@ -596,7 +596,7 @@
           return;
         }
 
-        if (xhr.status !== 200) {
+        if (xhr.status < 200 || xhr.status >= 300) {
           console.log('ActiveSync command ' + aCommand + ' failed with ' +
                       'response ' + xhr.status);
           aCallback(new HttpError(xhr.statusText, xhr.status));
