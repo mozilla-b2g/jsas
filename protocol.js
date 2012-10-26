@@ -465,6 +465,9 @@
         aCallback(new Error('Error getting OPTIONS URL'));
       };
 
+      // Set the response type to "text" so that we don't try to parse an empty
+      // body as XML.
+      xhr.responseType = 'text';
       xhr.send();
     },
 
