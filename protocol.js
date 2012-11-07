@@ -509,8 +509,13 @@
      *        parameters that should be added to the end of the request URL
      * @param aExtraHeaders (optional) an object containing any extra HTTP
      *        headers to send in the request
+     * @param aProgressCallback (optional) a callback to invoke with progress
+     *        information, when available. Two arguments are provided: the
+     *        number of bytes received so far, and the total number of bytes
+     *        expected (when known, 0 if unknown).
      */
-    postCommand: function(aCommand, aCallback, aExtraParams, aExtraHeaders) {
+    postCommand: function(aCommand, aCallback, aExtraParams, aExtraHeaders,
+                          aProgressCallback) {
       const contentType = 'application/vnd.ms-sync.wbxml';
 
       if (typeof aCommand === 'string' || typeof aCommand === 'number') {
@@ -521,7 +526,7 @@
         let r = new WBXML.Reader(aCommand, ASCP);
         let commandName = r.document.next().localTagName;
         this.postData(commandName, contentType, aCommand.buffer, aCallback,
-                      aExtraParams, aExtraHeaders);
+                      aExtraParams, aExtraHeaders, aProgressCallback);
       }
     },
 
@@ -539,9 +544,13 @@
      *        parameters that should be added to the end of the request URL
      * @param aExtraHeaders (optional) an object containing any extra HTTP
      *        headers to send in the request
+     * @param aProgressCallback (optional) a callback to invoke with progress
+     *        information, when available. Two arguments are provided: the
+     *        number of bytes received so far, and the total number of bytes
+     *        expected (when known, 0 if unknown).
      */
     postData: function(aCommand, aContentType, aData, aCallback, aExtraParams,
-                       aExtraHeaders) {
+                       aExtraHeaders, aProgressCallback) {
       // Make sure our command name is a string.
       if (typeof aCommand === 'number')
         aCommand = ASCP.__tagnames__[aCommand];
@@ -615,6 +624,12 @@
       xhr.onerror = function() {
         aCallback(new Error('Error getting command URL'));
       };
+
+      if (aProgressCallback) {
+        xhr.onprogress = function(event) {
+          aProgressCallback(event.loaded, event.total);
+        };
+      }
 
       xhr.responseType = 'arraybuffer';
       xhr.send(aData);
