@@ -127,6 +127,7 @@
     this._password = aPassword;
     this._deviceId = aDeviceId || 'v140Device';
     this._deviceType = aDeviceType || 'SmartPhone';
+    this.timeout = 0;
 
     this._connection = 0;
     this._waitingForConnection = false;
@@ -341,6 +342,11 @@
                true);
       xhr.setRequestHeader('Content-Type', 'text/xml');
       xhr.setRequestHeader('Authorization', this._getAuth());
+      xhr.timeout = this.timeout;
+
+      xhr.onprogress = function() {
+        xhr.timeout = 0;
+      };
 
       xhr.onload = function() {
         if (xhr.status < 200 || xhr.status >= 300)
@@ -411,7 +417,7 @@
         aCallback(null, config);
       };
 
-      xhr.onerror = function() {
+      xhr.ontimeout = xhr.onerror = function() {
         aCallback(new Error('Error getting Autodiscover URL'));
       };
 
@@ -444,6 +450,11 @@
       let conn = this;
       let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
       xhr.open('OPTIONS', this.baseUrl, true);
+      xhr.timeout = this.timeout;
+
+      xhr.onprogress = function() {
+        xhr.timeout = 0;
+      };
 
       xhr.onload = function() {
         if (xhr.status < 200 || xhr.status >= 300) {
@@ -461,7 +472,7 @@
         aCallback(null, result);
       };
 
-      xhr.onerror = function() {
+      xhr.ontimeout = xhr.onerror = function() {
         aCallback(new Error('Error getting OPTIONS URL'));
       };
 
@@ -595,6 +606,14 @@
           xhr.setRequestHeader(key, value);
       }
 
+      xhr.timeout = this.timeout;
+
+      xhr.onprogress = function(event) {
+        xhr.timeout = 0;
+        if (aProgressCallback)
+          aProgressCallback(event.loaded, event.total);
+      };
+
       let conn = this;
       let parentArgs = arguments;
       xhr.onload = function() {
@@ -621,15 +640,9 @@
         aCallback(null, response);
       };
 
-      xhr.onerror = function() {
+      xhr.ontimeout = xhr.onerror = function() {
         aCallback(new Error('Error getting command URL'));
       };
-
-      if (aProgressCallback) {
-        xhr.onprogress = function(event) {
-          aProgressCallback(event.loaded, event.total);
-        };
-      }
 
       xhr.responseType = 'arraybuffer';
       xhr.send(aData);
