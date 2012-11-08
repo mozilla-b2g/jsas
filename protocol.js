@@ -135,6 +135,15 @@
   }
   exports.Connection = Connection;
   Connection.prototype = {
+    /**
+     * Get the auth string to add to our XHR's headers.
+     *
+     * @return the auth string
+     */
+    _getAuth: function() {
+      return 'Basic ' + btoa(this._email + ':' + this._password);
+    },
+
     get _emailDomain() {
       return this._email.substring(this._email.indexOf('@') + 1);
     },
@@ -330,8 +339,9 @@
 
       let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
       xhr.open('POST', 'https://' + aHost + '/autodiscover/autodiscover.xml',
-               true, this._email, this._password);
+               true);
       xhr.setRequestHeader('Content-Type', 'text/xml');
+      xhr.setRequestHeader('Authorization', this._getAuth());
       xhr.timeout = this.timeout;
 
       xhr.onprogress = function() {
@@ -585,10 +595,10 @@
 
       // Now it's time to make our request!
       let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
-      xhr.open('POST', this.baseUrl + '?' + paramsStr, true, this._email,
-               this._password);
+      xhr.open('POST', this.baseUrl + '?' + paramsStr, true);
       xhr.setRequestHeader('MS-ASProtocolVersion', this.currentVersion);
       xhr.setRequestHeader('Content-Type', aContentType);
+      xhr.setRequestHeader('Authorization', this._getAuth());
 
       // Add extra headers if we have any.
       if (aExtraHeaders) {
