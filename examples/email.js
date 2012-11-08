@@ -181,7 +181,7 @@ function getMessages(folder, getBodies) {
             w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
              .tag(as.MIMETruncation, asEnum.MIMETruncation.Truncate100K);
     }
-    else if (conn.currentVersion.lt('12.0')) {
+    else if (conn.currentVersion.lte('12.0')) {
             w.tag(as.MIMESupport, asEnum.MIMESupport.Never)
              .tag(as.Truncation, asEnum.MIMETruncation.TruncateAll);
     }
