@@ -263,6 +263,10 @@ function getMessage(folderId, messageId, contentType) {
        .tag(as.CollectionId, folderId)
        .tag(as.ServerId, messageId)
        .stag(io.Options)
+         // Only get the AirSyncBase:Body element to minimize bandwidth usage.
+         .stag(io.Schema)
+           .tag(asb.Body)
+         .etag()
          .stag(asb.BodyPreference)
            .tag(asb.Type, contentType)
          .etag()
