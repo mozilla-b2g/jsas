@@ -344,7 +344,7 @@
       xhr.setRequestHeader('Authorization', this._getAuth());
       xhr.timeout = this.timeout;
 
-      xhr.onprogress = function() {
+      xhr.upload.onprogress = xhr.upload.onload = function() {
         xhr.timeout = 0;
       };
 
@@ -452,7 +452,7 @@
       xhr.open('OPTIONS', this.baseUrl, true);
       xhr.timeout = this.timeout;
 
-      xhr.onprogress = function() {
+      xhr.upload.onprogress = xhr.upload.onload = function() {
         xhr.timeout = 0;
       };
 
@@ -608,8 +608,10 @@
 
       xhr.timeout = this.timeout;
 
-      xhr.onprogress = function(event) {
+      xhr.upload.onprogress = xhr.upload.onload = function() {
         xhr.timeout = 0;
+      };
+      xhr.onprogress = function(event) {
         if (aProgressCallback)
           aProgressCallback(event.loaded, event.total);
       };
