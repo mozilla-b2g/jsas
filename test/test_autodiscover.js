@@ -19,7 +19,7 @@ function test_async_autodiscover_hotmail(callback) {
   ActiveSyncProtocol.autodiscover(TEST_HOTMAIL_USERNAME,
                                   TEST_HOTMAIL_PASSWORD,
                                   0,
-                                  function(aError, aOptions) {
+                                  function(aError, aConfig) {
     if (aError)
       callback(aError);
     else
@@ -31,7 +31,7 @@ function subtest_async_autodiscover_hotmail_badpass(callback) {
   ActiveSyncProtocol.autodiscover(TEST_HOTMAIL_USERNAME,
                                   TEST_HOTMAIL_BAD_PASSWORD,
                                   0,
-                                  function(aError, aOptions) {
+                                  function(aError, aConfig) {
     if (aError)
       callback(null);
     else

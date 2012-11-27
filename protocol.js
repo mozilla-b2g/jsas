@@ -290,6 +290,7 @@
 
     this._connected = false;
     this._waitingForConnection = false;
+    this._connectionError = null;
     this._connectionCallbacks = [];
 
     this.baseUrl = null;
@@ -336,15 +337,19 @@
       if (this.connected || this._waitingForConnection)
         throw new Error("Can't call connect() twice");
 
-      this.waitForConnection(aCallback);
+      if (aCallback)
+        this.waitForConnection(aCallback);
 
       this.baseUrl = aServer + '/Microsoft-Server-ActiveSync';
       this._username = aUsername;
       this._password = aPassword;
 
       this._waitingForConnection = true;
+      this._connectionError = null;
+
       this.getOptions((function(aError, aOptions) {
         this._waitingForConnection = false;
+        this._connectionError = aError;
 
         if (aError)
           return this._notifyConnected(aError, aOptions);
@@ -360,18 +365,19 @@
 
     /**
      * Wait until we've negotiated a connection to run a callback. This calls
-     * the callback immediately if we're already connected.
+     * the callback immediately if we're already connected, or if we had tried
+     * to connect, but got an error.
      *
      * @param aCallback a callback taking an error status (if any) and, if the
      *        connection was not already established, the server's options.
      */
     waitForConnection: function(aCallback) {
-      if (aCallback) {
-        if (this.connected)
-          aCallback(null);
-        else
+      if (this.connected)
+        aCallback(null);
+      else if (this._connectionError)
+        aCallback(this._connectionError);
+      else
         this._connectionCallbacks.push(aCallback);
-      }
     },
 
     /**
