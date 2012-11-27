@@ -42,21 +42,64 @@ function logWBXML(data) {
   log(wrapper+'\n\n');
 }
 
+const hardcodedServers = {
+  'gmail.com':      'https://m.google.com',
+  'googlemail.com': 'https://m.google.com',
+  'live.com':       'https://m.hotmail.com',
+  'hotmail.es':     'https://m.hotmail.com',
+  'aslocalhost':    'http://localhost:8080',
+};
+function findServer(email, password, callback) {
+  let [localPart, domainPart] = email.split('@');
+
+  // Special-case tid.es, since they have funny usernames.
+  if (domainPart === 'tid.es') {
+    callback(null, { serverUrl: 'https://correo.tid.es',
+                     username: 'HI\\' + localPart });
+  }
+  else if (hardcodedServers.hasOwnProperty(domainPart)) {
+    callback(null, { serverUrl: hardcodedServers[domainPart],
+                     username: email });
+  }
+  else {
+    ActiveSyncProtocol.autodiscover(email, password, 0,
+    function(aError, aConfig) {
+      if (aError) {
+        callback(aError);
+      }
+      else {
+        let serverUrl = aConfig.mobileSyncServer.url;
+        callback(null, {serverUrl: serverUrl,
+                        username: email });
+      }
+    });
+  }
+}
+
 var account = {
   folders: [],
 };
 
 var conn;
 window.addEventListener('load', function() {
-  conn = new ActiveSyncProtocol.Connection(email, password);
-  conn.connect(function(aError, aConfig, aOptions) {
+  findServer(email, password, function(aError, aConfig) {
     if (aError) {
       alert(aError);
       return;
     }
 
-    log('Connected to ' + aConfig.selectedServer.url + '\n');
-    getFolders();
+    log('Connecting to ' + aConfig.serverUrl + '...\n');
+
+    conn = new ActiveSyncProtocol.Connection();
+    conn.connect(aConfig.serverUrl, aConfig.username, password,
+                 function(aError, aOptions) {
+      if (aError) {
+        alert(aError);
+        return;
+      }
+
+      getFolders();
+    });
   });
 }, false);
 
@@ -198,6 +241,8 @@ function getMessages(folder, getBodies) {
         alert(aError)
         return;
       }
+      if (!aResponse)
+        return;
 
       let e = new WBXML.EventParser();
       e.addEventListener([as.Sync, as.Collections, as.Collection, as.SyncKey],
