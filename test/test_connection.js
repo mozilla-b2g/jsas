@@ -16,23 +16,37 @@
 'use strict';
 
 function test_async_connection_bad_connection(callback) {
-  let conn = new ActiveSyncProtocol.Connection();
-  conn.connect('https://this.domain.does.not.exist', 'username', 'password',
-               function(aError, aOptions) {
-    if (aError) {
-      let failureTimeout = setTimeout(function() {
-        callback(new Error('Timed out!'));
-      }, 1000);
+  const expectedSeen = 3;
+  let seen = 0;
+  let errors = [];
+  let failureTimeout = setTimeout(function() {
+    callback(new Error('Timed out!'));
+  }, 1000);
+  let connectionCallback = function(error) {
+    errors.push(error);
+    seen++;
 
-      conn.waitForConnection(function(aInnerError) {
-        clearTimeout(failureTimeout);
-        if (aError === aInnerError)
-          callback(null);
-        else
+    if (seen === expectedSeen) {
+      clearTimeout(failureTimeout);
+
+      // Make sure all the errors are identical.
+      for (let i = 1; i < errors.length; i++) {
+        if (errors[i] !== errors[0]) {
           callback(new Error("Errors don't match!"));
-      });
+          return;
+        }
+      }
+      callback(null);
     }
-    else
-      callback(new Error('Connecting should have failed!'));
-  });
+    else if (seen > expectedSeen) {
+      callback(new Error("Saw too many callbacks!"));
+    }
+  };
+
+
+  let conn = new ActiveSyncProtocol.Connection();
+  conn.open('https://this.domain.does.not.exist', 'username', 'password');
+  conn.connect(connectionCallback);
+  conn.connect(connectionCallback);
+  conn.connect(connectionCallback);
 }

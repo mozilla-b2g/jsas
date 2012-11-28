@@ -326,23 +326,41 @@
       return this._connected;
     },
 
+    /*
+     * Initialize the connection with a server and account credentials.
+     *
+     * @param aServer the ActiveSync server to connect to
+     * @param aUsername the account's username
+     * @param aPassword the account's password
+     */
+    open: function(aServer, aUsername, aPassword) {
+      this.baseUrl = aServer + '/Microsoft-Server-ActiveSync';
+      this._username = aUsername;
+      this._password = aPassword;
+    },
+
     /**
-     * Perform autodiscovery and get the options for the server associated with
-     * this account.
+     * Connect to the server with this account by getting the OPTIONS from
+     * the server (and verifying the account's credentials).
      *
      * @param aCallback a callback taking an error status (if any) and the
      *        server's options.
      */
-    connect: function(aServer, aUsername, aPassword, aCallback) {
-      if (this.connected || this._waitingForConnection)
-        throw new Error("Can't call connect() twice");
+    connect: function(aCallback) {
+      // If we're already connected, just run the callback and return.
+      if (this.connected) {
+        if (aCallback)
+          aCallback(null);
+        return;
+      }
 
+      // Otherwise, queue this callback up to fire when we do connect.
       if (aCallback)
-        this.waitForConnection(aCallback);
+        this._connectionCallbacks.push(aCallback);
 
-      this.baseUrl = aServer + '/Microsoft-Server-ActiveSync';
-      this._username = aUsername;
-      this._password = aPassword;
+      // Don't do anything else if we're already trying to connect.
+      if (this._waitingForConnection)
+        return;
 
       this._waitingForConnection = true;
       this._connectionError = null;
@@ -351,8 +369,10 @@
         this._waitingForConnection = false;
         this._connectionError = aError;
 
-        if (aError)
+        if (aError) {
+          console.error('Error connecting to ActiveSync:', aError);
           return this._notifyConnected(aError, aOptions);
+        }
 
         this._connected = true;
         this.versions = aOptions.versions;
@@ -361,23 +381,6 @@
 
         return this._notifyConnected(null, aOptions);
       }).bind(this));
-    },
-
-    /**
-     * Wait until we've negotiated a connection to run a callback. This calls
-     * the callback immediately if we're already connected, or if we had tried
-     * to connect, but got an error.
-     *
-     * @param aCallback a callback taking an error status (if any) and, if the
-     *        connection was not already established, the server's options.
-     */
-    waitForConnection: function(aCallback) {
-      if (this.connected)
-        aCallback(null);
-      else if (this._connectionError)
-        aCallback(this._connectionError);
-      else
-        this._connectionCallbacks.push(aCallback);
     },
 
     /**
@@ -435,8 +438,8 @@
 
       xhr.onload = function() {
         if (xhr.status < 200 || xhr.status >= 300) {
-          console.log('ActiveSync options request failed with response ' +
-                      xhr.status);
+          console.error('ActiveSync options request failed with response ' +
+                        xhr.status);
           aCallback(new HttpError(xhr.statusText, xhr.status));
           return;
         }
@@ -450,7 +453,9 @@
       };
 
       xhr.ontimeout = xhr.onerror = function() {
-        aCallback(new Error('Error getting OPTIONS URL'));
+        let error = new Error('Error getting OPTIONS URL');
+        console.error(error);
+        aCallback(error);
       };
 
       // Set the response type to "text" so that we don't try to parse an empty
@@ -546,7 +551,7 @@
       if (!this.supportsCommand(aCommand)) {
         let error = new Error("This server doesn't support the command " +
                               aCommand);
-        console.log(error);
+        console.error(error);
         aCallback(error);
         return;
       }
@@ -607,8 +612,8 @@
         }
 
         if (xhr.status < 200 || xhr.status >= 300) {
-          console.log('ActiveSync command ' + aCommand + ' failed with ' +
-                      'response ' + xhr.status);
+          console.error('ActiveSync command ' + aCommand + ' failed with ' +
+                        'response ' + xhr.status);
           aCallback(new HttpError(xhr.statusText, xhr.status));
           return;
         }
@@ -620,7 +625,9 @@
       };
 
       xhr.ontimeout = xhr.onerror = function() {
-        aCallback(new Error('Error getting command URL'));
+        let error = new Error('Error getting command URL');
+        console.error(error);
+        aCallback(error);
       };
 
       xhr.responseType = 'arraybuffer';

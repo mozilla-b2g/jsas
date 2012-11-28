@@ -91,8 +91,8 @@ window.addEventListener('load', function() {
     log('Connecting to ' + aConfig.serverUrl + '...\n');
 
     conn = new ActiveSyncProtocol.Connection();
-    conn.connect(aConfig.serverUrl, aConfig.username, password,
-                 function(aError, aOptions) {
+    conn.open(aConfig.serverUrl, aConfig.username, password);
+    conn.connect(function(aError, aOptions) {
       if (aError) {
         alert(aError);
         return;
