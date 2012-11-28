@@ -384,18 +384,15 @@
     },
 
     /**
-     * Disconnect from the ActiveSync server, and reset all local state.
+     * Disconnect from the ActiveSync server, and reset the connection state.
+     * The server and credentials remain set however, so you can safely call
+     * connect() again immediately after.
      */
     disconnect: function() {
       if (this._waitingForConnection)
         throw new Error("Can't disconnect while waiting for server response");
 
       this._connected = false;
-
-      this.baseUrl = null;
-      this._username = null;
-      this._password = null;
-
       this.versions = [];
       this.supportedCommands = [];
       this.currentVersion = null;
