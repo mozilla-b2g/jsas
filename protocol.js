@@ -27,30 +27,56 @@
 
   function nullCallback() {}
 
-  function AutodiscoverError(message) {
-    this.name = 'ActiveSync.AutodiscoverError';
-    this.message = message || '';
+  /**
+   * Create a constructor for a custom error type that works like a built-in
+   * Error.
+   *
+   * @param name the string name of the error
+   * @param parent (optional) a parent class for the error, defaults to Error
+   * @param extraArgs an array of extra arguments that can be passed to the
+   *        constructor of this error type
+   * @return the constructor for this error
+   */
+  function makeError(name, parent, extraArgs) {
+    function CustomError() {
+      // Try to let users call this as CustomError(...) without the "new". This
+      // is imperfect, and if you call this function directly and give it a
+      // |this| that's a CustomError, things will break. Don't do it!
+      var self = this instanceof CustomError ?
+                 this : Object.create(CustomError.prototype);
+      var tmp = Error();
+      var offset = 1;
+
+      self.stack = tmp.stack.substring(tmp.stack.indexOf('\n') + 1);
+      self.message = arguments[0] || tmp.message;
+      if (extraArgs) {
+        offset += extraArgs.length;
+        for (var i = 0; i < extraArgs.length; i++)
+          self[extraArgs[i]] = arguments[i+1];
+      }
+
+      var m = /@(.+):(.+)/.exec(self.stack);
+      self.fileName = arguments[offset] || (m && m[1]) || "";
+      self.lineNumber = arguments[offset + 1] || (m && m[2]) || 0;
+
+      return self;
+    }
+    CustomError.prototype = Object.create((parent || Error).prototype);
+    CustomError.prototype.name = name;
+    CustomError.prototype.constructor = CustomError;
+
+    return CustomError;
   }
+
+  var AutodiscoverError = makeError('ActiveSync.AutodiscoverError');
   exports.AutodiscoverError = AutodiscoverError;
-  AutodiscoverError.prototype = new Error();
-  AutodiscoverError.prototype.constructor = AutodiscoverError;
 
-  function AutodiscoverDomainError(message) {
-    this.name = 'ActiveSync.AutodiscoverDomainError';
-    this.message = message || '';
-  }
+  var AutodiscoverDomainError = makeError('ActiveSync.AutodiscoverDomainError',
+                                          AutodiscoverError);
   exports.AutodiscoverDomainError = AutodiscoverDomainError;
-  AutodiscoverDomainError.prototype = new AutodiscoverError();
-  AutodiscoverDomainError.prototype.constructor = AutodiscoverDomainError;
 
-  function HttpError(message, status) {
-    this.name = 'ActiveSync.HttpError';
-    this.message = message || '';
-    this.status = status || 0;
-  }
+  var HttpError = makeError('ActiveSync.HttpError', null, ['status']);
   exports.HttpError = HttpError;
-  HttpError.prototype = new Error();
-  HttpError.prototype.constructor = HttpError;
 
   function nsResolver(prefix) {
     const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
