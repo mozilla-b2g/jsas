@@ -46,6 +46,7 @@ const hardcodedServers = {
   'gmail.com':      'https://m.google.com',
   'googlemail.com': 'https://m.google.com',
   'live.com':       'https://m.hotmail.com',
+  'outlook.com':    'https://m.hotmail.com',
   'hotmail.es':     'https://m.hotmail.com',
   'aslocalhost':    'http://localhost:8080',
 };
