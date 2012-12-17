@@ -156,11 +156,12 @@
     let domain = aEmailAddress.substring(aEmailAddress.indexOf('@') + 1);
 
     // The first time we try autodiscovery, we should try to recover from
-    // AutodiscoverDomainErrors. The second time, *all* errors should be
-    // reported to the callback.
+    // AutodiscoverDomainErrors and HttpErrors. The second time, *all* errors
+    // should be reported to the callback.
     do_autodiscover(domain, aEmailAddress, aPassword, aTimeout, aNoRedirect,
                     function(aError, aConfig) {
-      if (aError instanceof AutodiscoverDomainError)
+      if (aError instanceof AutodiscoverDomainError ||
+          aError instanceof HttpError)
         do_autodiscover('autodiscover.' + domain, aEmailAddress, aPassword,
                         aTimeout, aNoRedirect, aCallback);
       else
