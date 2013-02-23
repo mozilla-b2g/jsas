@@ -79,8 +79,8 @@
   exports.HttpError = HttpError;
 
   function nsResolver(prefix) {
-    const baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
-    const ns = {
+    var baseUrl = 'http://schemas.microsoft.com/exchange/autodiscover/';
+    var ns = {
       rq: baseUrl + 'mobilesync/requestschema/2006',
       ad: baseUrl + 'responseschema/2006',
       ms: baseUrl + 'mobilesync/responseschema/2006',
@@ -89,9 +89,10 @@
   }
 
   function Version(str) {
-    [this.major, this.minor] = str.split('.').map(function(x) {
+    var details = str.split('.').map(function(x) {
       return parseInt(x);
     });
+    this.major = details[0], this.minor = details[1];
   }
   exports.Version = Version;
   Version.prototype = {
@@ -134,7 +135,7 @@
    * @param password the user's password
    */
   function setAuthHeader(xhr, username, password) {
-    let authorization = 'Basic ' + btoa(username + ':' + password);
+    var authorization = 'Basic ' + btoa(username + ':' + password);
     xhr.setRequestHeader('Authorization', authorization);
   }
 
@@ -153,7 +154,7 @@
   function autodiscover(aEmailAddress, aPassword, aTimeout, aCallback,
                         aNoRedirect) {
     if (!aCallback) aCallback = nullCallback;
-    let domain = aEmailAddress.substring(aEmailAddress.indexOf('@') + 1);
+    var domain = aEmailAddress.substring(aEmailAddress.indexOf('@') + 1);
 
     // The first time we try autodiscovery, we should try to recover from
     // AutodiscoverDomainErrors and HttpErrors. The second time, *all* errors
@@ -185,7 +186,7 @@
    */
   function do_autodiscover(aHost, aEmailAddress, aPassword, aTimeout,
                            aNoRedirect, aCallback) {
-    let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
+    var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
     xhr.open('POST', 'https://' + aHost + '/autodiscover/autodiscover.xml',
              true);
     setAuthHeader(xhr, aEmailAddress, aPassword);
@@ -200,7 +201,7 @@
       if (xhr.status < 200 || xhr.status >= 300)
         return aCallback(new HttpError(xhr.statusText, xhr.status));
 
-      let doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
+      var doc = new DOMParser().parseFromString(xhr.responseText, 'text/xml');
 
       function getNode(xpath, rel) {
         return doc.evaluate(xpath, rel, nsResolver,
@@ -220,30 +221,30 @@
         return aCallback(new AutodiscoverDomainError(
           'Error parsing autodiscover response'));
 
-      let responseNode = getNode('/ad:Autodiscover/ms:Response', doc);
+      var responseNode = getNode('/ad:Autodiscover/ms:Response', doc);
       if (!responseNode)
         return aCallback(new AutodiscoverDomainError(
           'Missing Autodiscover Response node'));
 
-      let error = getNode('ms:Error', responseNode) ||
+      var error = getNode('ms:Error', responseNode) ||
                   getNode('ms:Action/ms:Error', responseNode);
       if (error)
         return aCallback(new AutodiscoverError(
           getString('ms:Message/text()', error)));
 
-      let redirect = getNode('ms:Action/ms:Redirect', responseNode);
+      var redirect = getNode('ms:Action/ms:Redirect', responseNode);
       if (redirect) {
         if (aNoRedirect)
           return aCallback(new AutodiscoverError(
             'Multiple redirects occurred during autodiscovery'));
 
-        let redirectedEmail = getString('text()', redirect);
+        var redirectedEmail = getString('text()', redirect);
         return autodiscover(redirectedEmail, aPassword, aTimeout, aCallback,
                             true);
       }
 
-      let user = getNode('ms:User', responseNode);
-      let config = {
+      var user = getNode('ms:User', responseNode);
+      var config = {
         culture: getString('ms:Culture/text()', responseNode),
         user: {
           name:  getString('ms:DisplayName/text()',  user),
@@ -252,8 +253,8 @@
         servers: [],
       };
 
-      let servers = getNodes('ms:Action/ms:Settings/ms:Server', responseNode);
-      let server;
+      var servers = getNodes('ms:Action/ms:Settings/ms:Server', responseNode);
+      var server;
       while ((server = servers.iterateNext())) {
         config.servers.push({
           type:       getString('ms:Type/text()',       server),
@@ -264,7 +265,8 @@
       }
 
       // Try to find a MobileSync server from Autodiscovery.
-      for (let [,server] in Iterator(config.servers)) {
+      for (var iter in Iterator(config.servers)) {
+        var server = iter[1];
         if (server.type === 'MobileSync') {
           config.mobileSyncServer = server;
           break;
@@ -284,7 +286,7 @@
 
     // TODO: use something like
     // http://ejohn.org/blog/javascript-micro-templating/ here?
-    let postdata =
+    var postdata =
     '<?xml version="1.0" encoding="utf-8"?>\n' +
     '<Autodiscover xmlns="' + nsResolver('rq') + '">\n' +
     '  <Request>\n' +
@@ -339,8 +341,10 @@
       if (aError)
         this.disconnect();
 
-      for (let [,callback] in Iterator(this._connectionCallbacks))
+      for (var iter in Iterator(this._connectionCallbacks)) {
+        var callback = iter[1];
         callback.apply(callback, arguments);
+      }
       this._connectionCallbacks = [];
     },
 
@@ -434,8 +438,8 @@
      *        WBXML response
      */
     provision: function(aCallback) {
-      const pv = ASCP.Provision.Tags;
-      let w = new WBXML.Writer('1.3', 1, 'UTF-8');
+      var pv = ASCP.Provision.Tags;
+      var w = new WBXML.Writer('1.3', 1, 'UTF-8');
       w.stag(pv.Provision)
         .etag();
       this.postCommand(w, aCallback);
@@ -450,8 +454,8 @@
     getOptions: function(aCallback) {
       if (!aCallback) aCallback = nullCallback;
 
-      let conn = this;
-      let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
+      var conn = this;
+      var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
       xhr.open('OPTIONS', this.baseUrl, true);
       setAuthHeader(xhr, this._username, this._password);
       xhr.timeout = this.timeout;
@@ -468,7 +472,7 @@
           return;
         }
 
-        let result = {
+        var result = {
           versions: xhr.getResponseHeader('MS-ASProtocolVersions').split(','),
           commands: xhr.getResponseHeader('MS-ASProtocolCommands').split(','),
         };
@@ -477,7 +481,7 @@
       };
 
       xhr.ontimeout = xhr.onerror = function() {
-        let error = new Error('Error getting OPTIONS URL');
+        var error = new Error('Error getting OPTIONS URL');
         console.error(error);
         aCallback(error);
       };
@@ -533,15 +537,15 @@
      */
     postCommand: function(aCommand, aCallback, aExtraParams, aExtraHeaders,
                           aProgressCallback) {
-      const contentType = 'application/vnd.ms-sync.wbxml';
+      var contentType = 'application/vnd.ms-sync.wbxml';
 
       if (typeof aCommand === 'string' || typeof aCommand === 'number') {
         this.postData(aCommand, contentType, null, aCallback, aExtraParams,
                       aExtraHeaders);
       }
       else {
-        let r = new WBXML.Reader(aCommand, ASCP);
-        let commandName = r.document.next().localTagName;
+        var r = new WBXML.Reader(aCommand, ASCP);
+        var commandName = r.document.next().localTagName;
         this.postData(commandName, contentType, aCommand.buffer, aCallback,
                       aExtraParams, aExtraHeaders, aProgressCallback);
       }
@@ -573,7 +577,7 @@
         aCommand = ASCP.__tagnames__[aCommand];
 
       if (!this.supportsCommand(aCommand)) {
-        let error = new Error("This server doesn't support the command " +
+        var error = new Error("This server doesn't support the command " +
                               aCommand);
         console.error(error);
         aCallback(error);
@@ -581,26 +585,27 @@
       }
 
       // Build the URL parameters.
-      let params = [
+      var params = [
         ['Cmd', aCommand],
         ['User', this._email],
         ['DeviceId', this._deviceId],
         ['DeviceType', this._deviceType]
       ];
       if (aExtraParams) {
-        for (let [,param] in Iterator(params)) {
+        for (var iter in Iterator(params)) {
+          var param = iter[1];
           if (param[0] in aExtraParams)
             throw new TypeError('reserved URL parameter found');
         }
-        for (let kv in Iterator(aExtraParams))
+        for (var kv in Iterator(aExtraParams))
           params.push(kv);
       }
-      let paramsStr = params.map(function(i) {
+      var paramsStr = params.map(function(i) {
         return encodeURIComponent(i[0]) + '=' + encodeURIComponent(i[1]);
       }).join('&');
 
       // Now it's time to make our request!
-      let xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
+      var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
       xhr.open('POST', this.baseUrl + '?' + paramsStr, true);
       setAuthHeader(xhr, this._username, this._password);
       xhr.setRequestHeader('MS-ASProtocolVersion', this.currentVersion);
@@ -608,8 +613,10 @@
 
       // Add extra headers if we have any.
       if (aExtraHeaders) {
-        for (let [key, value] in Iterator(aExtraHeaders))
+        for (var iter in Iterator(aExtraHeaders)) {
+          var key = iter[0], key = iter[1];
           xhr.setRequestHeader(key, value);
+        }
       }
 
       xhr.timeout = this.timeout;
@@ -622,8 +629,8 @@
           aProgressCallback(event.loaded, event.total);
       };
 
-      let conn = this;
-      let parentArgs = arguments;
+      var conn = this;
+      var parentArgs = arguments;
       xhr.onload = function() {
         // This status code is a proprietary Microsoft extension used to
         // indicate a redirect, not to be confused with the draft-standard
@@ -642,14 +649,14 @@
           return;
         }
 
-        let response = null;
+        var response = null;
         if (xhr.response.byteLength > 0)
           response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
         aCallback(null, response);
       };
 
       xhr.ontimeout = xhr.onerror = function() {
-        let error = new Error('Error getting command URL');
+        var error = new Error('Error getting command URL');
         console.error(error);
         aCallback(error);
       };
