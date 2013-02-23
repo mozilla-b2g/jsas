@@ -23,7 +23,7 @@
 }(this, function(WBXML) {
   'use strict';
 
-  let codepages = {
+  var codepages = {
     Common: {
       Enums: {
         Status: {
