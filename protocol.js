@@ -545,7 +545,7 @@
       }
       else {
         var r = new WBXML.Reader(aCommand, ASCP);
-        var commandName = r.document.next().localTagName;
+        var commandName = r.document[0].localTagName;
         this.postData(commandName, contentType, aCommand.buffer, aCallback,
                       aExtraParams, aExtraHeaders, aProgressCallback);
       }
