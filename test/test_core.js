@@ -151,7 +151,7 @@ function verify_document(reader, expectedVersion, expectedPid, expectedCharset,
   assert_equals(reader.charset, expectedCharset);
 
   for (let [actual, expected] in
-       zip( reader.document, iter_values(expectedNodes) )) {
+       zip( iter_values(reader.document), iter_values(expectedNodes) )) {
     assert_equals(actual.ownerDocument, reader);
     verify_node(actual, expected);
   }
