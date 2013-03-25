@@ -201,8 +201,9 @@
       if (xhr.status < 200 || xhr.status >= 300)
         return aCallback(new HttpError(xhr.statusText, xhr.status));
 
+      var uid = Math.random();
       self.postMessage({
-        uid: 0,
+        uid: uid,
         type: 'configparser',
         cmd: 'accountactivesync',
         args: [xhr.responseText]
@@ -210,12 +211,13 @@
 
       self.addEventListener('message', function onworkerresponse(evt) {
         var data = evt.data;
-        if (data.type != 'configparser' || data.cmd != 'accountactivesync') {
+        if (data.type != 'configparser' || data.cmd != 'accountactivesync' ||
+            data.uid != uid) {
           return;
         }
         self.removeEventListener(evt.type, onworkerresponse);
 
-        var args = data.args; 
+        var args = data.args;
         var config = args[0], error = args[1], redirectedEmail = args[2];
         if (error) {
           aCallback(new AutodiscoverDomainError(error), config);
