@@ -521,8 +521,9 @@
      * Send a WBXML command to the ActiveSync server and listen for the
      * response.
      *
-     * @param aCommand the WBXML representing the command or a string/tag
-     *        representing the command type for empty commands
+     * @param aCommand {WBXML.Writer|String|Number}
+     *   The WBXML representing the command or a string/tag representing the
+     *   command type for empty commands
      * @param aCallback a callback to call when the server has responded; takes
      *        two arguments: an error status (if any) and the response as a
      *        WBXML reader. If the server returned an empty response, the
@@ -544,11 +545,13 @@
         this.postData(aCommand, contentType, null, aCallback, aExtraParams,
                       aExtraHeaders);
       }
+      // WBXML.Writer
       else {
-        var r = new WBXML.Reader(aCommand, ASCP);
-        var commandName = r.document[0].localTagName;
-        this.postData(commandName, contentType, aCommand.buffer, aCallback,
-                      aExtraParams, aExtraHeaders, aProgressCallback);
+        var commandName = ASCP.__tagnames__[aCommand.rootTag];
+        this.postData(
+          commandName, contentType,
+          aCommand.dataType === 'blob' ? aCommand.blob : aCommand.buffer,
+          aCallback, aExtraParams, aExtraHeaders, aProgressCallback);
       }
     },
 
@@ -557,7 +560,7 @@
      *
      * @param aCommand a string (or WBXML tag) representing the command type
      * @param aContentType the content type of the post data
-     * @param aData the data to be posted
+     * @param aData {ArrayBuffer|Blob} the data to be posted
      * @param aCallback a callback to call when the server has responded; takes
      *        two arguments: an error status (if any) and the response as a
      *        WBXML reader. If the server returned an empty response, the
