@@ -598,6 +598,9 @@
         return;
       }
 
+      var isMultipart =
+        (aExtraHeaders && aExtraHeaders['MS-ASAcceptMultiPart'] === 'T');
+
       // Build the URL parameters.
       var params = [
         ['Cmd', aCommand],
@@ -641,7 +644,7 @@
       };
       xhr.onprogress = function(event) {
         if (aProgressCallback)
-          aProgressCallback(event.loaded, event.total);
+          aProgressCallback(event.loaded, event.total, xhr.response);
       };
 
       var conn = this;
@@ -670,13 +673,17 @@
           return;
         }
 
-        var response = null;
-        if (xhr.response.byteLength > 0)
-          response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-        if (conn.onmessage)
-          conn.onmessage(aCommand, 'ok', xhr, params, aExtraHeaders,
-                         aData, response);
-        aCallback(null, response);
+        if (isMultipart) {
+          aCallback(null, null);
+        } else {
+          var response = null;
+          if (xhr.response.byteLength > 0)
+            response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
+          if (conn.onmessage)
+            conn.onmessage(aCommand, 'ok', xhr, params, aExtraHeaders,
+                           aData, response);
+          aCallback(null, response);
+        }
       };
 
       xhr.ontimeout = xhr.onerror = function(evt) {
@@ -689,7 +696,8 @@
         aCallback(error);
       }.bind(this);
 
-      xhr.responseType = 'arraybuffer';
+      xhr.responseType =
+        (isMultipart ? 'moz-chunked-arraybuffer' : 'arraybuffer');
       xhr.send(aData);
     },
   };
