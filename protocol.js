@@ -437,12 +437,12 @@
      * @param aCallback a callback taking an error status (if any) and the
      *        WBXML response
      */
-    provision: function(aCallback) {
+    provision: function() {
       var pv = ASCP.Provision.Tags;
       var w = new WBXML.Writer('1.3', 1, 'UTF-8');
       w.stag(pv.Provision)
         .etag();
-      this.postCommand(w, aCallback);
+      return this.postCommand(w);
     },
 
     /**
@@ -520,24 +520,12 @@
     },
 
     /**
-     * DEPRECATED. See postCommand() below.
-     */
-    doCommand: function() {
-      console.warn('doCommand is deprecated. Use postCommand instead.');
-      this.postCommand.apply(this, arguments);
-    },
-
-    /**
      * Send a WBXML command to the ActiveSync server and listen for the
      * response.
      *
      * @param aCommand {WBXML.Writer|String|Number}
      *   The WBXML representing the command or a string/tag representing the
      *   command type for empty commands
-     * @param aCallback a callback to call when the server has responded; takes
-     *        two arguments: an error status (if any) and the response as a
-     *        WBXML reader. If the server returned an empty response, the
-     *        response argument is null.
      * @param aExtraParams (optional) an object containing any extra URL
      *        parameters that should be added to the end of the request URL
      * @param aExtraHeaders (optional) an object containing any extra HTTP
@@ -547,21 +535,21 @@
      *        number of bytes received so far, and the total number of bytes
      *        expected (when known, 0 if unknown).
      */
-    postCommand: function(aCommand, aCallback, aExtraParams, aExtraHeaders,
+    postCommand: function(aCommand, aExtraParams, aExtraHeaders,
                           aProgressCallback) {
       var contentType = 'application/vnd.ms-sync.wbxml';
 
       if (typeof aCommand === 'string' || typeof aCommand === 'number') {
-        this.postData(aCommand, contentType, null, aCallback, aExtraParams,
-                      aExtraHeaders);
+        return this.postData(aCommand, contentType, null, aExtraParams,
+                             aExtraHeaders);
       }
       // WBXML.Writer
       else {
         var commandName = ASCP.__tagnames__[aCommand.rootTag];
-        this.postData(
+        return this.postData(
           commandName, contentType,
           aCommand.dataType === 'blob' ? aCommand.blob : aCommand.buffer,
-          aCallback, aExtraParams, aExtraHeaders, aProgressCallback);
+          aExtraParams, aExtraHeaders, aProgressCallback);
       }
     },
 
@@ -584,113 +572,116 @@
      *        number of bytes received so far, and the total number of bytes
      *        expected (when known, 0 if unknown).
      */
-    postData: function(aCommand, aContentType, aData, aCallback, aExtraParams,
+    postData: function(aCommand, aContentType, aData, aExtraParams,
                        aExtraHeaders, aProgressCallback) {
-      // Make sure our command name is a string.
-      if (typeof aCommand === 'number')
-        aCommand = ASCP.__tagnames__[aCommand];
-
-      if (!this.supportsCommand(aCommand)) {
-        var error = new Error("This server doesn't support the command " +
-                              aCommand);
-        console.error(error);
-        aCallback(error);
-        return;
-      }
-
-      // Build the URL parameters.
-      var params = [
-        ['Cmd', aCommand],
-        ['User', this._username],
-        ['DeviceId', this._deviceId],
-        ['DeviceType', this._deviceType]
-      ];
-      if (aExtraParams) {
-        for (var iter in Iterator(params)) {
-          var param = iter[1];
-          if (param[0] in aExtraParams)
-            throw new TypeError('reserved URL parameter found');
-        }
-        for (var kv in Iterator(aExtraParams))
-          params.push(kv);
-      }
-      var paramsStr = params.map(function(i) {
-        return encodeURIComponent(i[0]) + '=' + encodeURIComponent(i[1]);
-      }).join('&');
-
-      // Now it's time to make our request!
-      var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
-      xhr.open('POST', this.baseUrl + '?' + paramsStr, true);
-      setAuthHeader(xhr, this._username, this._password);
-      xhr.setRequestHeader('MS-ASProtocolVersion', this.currentVersion);
-      xhr.setRequestHeader('Content-Type', aContentType);
-      xhr.setRequestHeader('User-Agent', USER_AGENT);
-
-      // Add extra headers if we have any.
-      if (aExtraHeaders) {
-        for (var iter in Iterator(aExtraHeaders)) {
-          var key = iter[0], value = iter[1];
-          xhr.setRequestHeader(key, value);
-        }
-      }
-
-      xhr.timeout = this.timeout;
-
-      xhr.upload.onprogress = xhr.upload.onload = function() {
-        xhr.timeout = 0;
-      };
-      xhr.onprogress = function(event) {
-        if (aProgressCallback)
-          aProgressCallback(event.loaded, event.total);
-      };
-
-      var conn = this;
       var parentArgs = arguments;
-      xhr.onload = function() {
-        // This status code is a proprietary Microsoft extension used to
-        // indicate a redirect, not to be confused with the draft-standard
-        // "Unavailable For Legal Reasons" status. More info available here:
-        // <http://msdn.microsoft.com/en-us/library/gg651019.aspx>
-        if (xhr.status === 451) {
-          conn.baseUrl = xhr.getResponseHeader('X-MS-Location');
-          if (conn.onmessage)
-            conn.onmessage(aCommand, 'redirect', xhr, params, aExtraHeaders,
-                           aData, null);
-          conn.postData.apply(conn, parentArgs);
+      return new Promise((resolve, reject) => {
+        // Make sure our command name is a string.
+        if (typeof aCommand === 'number')
+          aCommand = ASCP.__tagnames__[aCommand];
+
+        if (!this.supportsCommand(aCommand)) {
+          var error = new Error("This server doesn't support the command " +
+                                aCommand);
+          console.error(error);
+          reject(error);
           return;
         }
 
-        if (xhr.status < 200 || xhr.status >= 300) {
-          console.error('ActiveSync command ' + aCommand + ' failed with ' +
-                        'response ' + xhr.status);
-          if (conn.onmessage)
-            conn.onmessage(aCommand, 'error', xhr, params, aExtraHeaders,
-                           aData, null);
-          aCallback(new HttpError(xhr.statusText, xhr.status));
-          return;
+        // Build the URL parameters.
+        var params = [
+          ['Cmd', aCommand],
+          ['User', this._username],
+          ['DeviceId', this._deviceId],
+          ['DeviceType', this._deviceType]
+        ];
+        if (aExtraParams) {
+          for (var iter in Iterator(params)) {
+            var param = iter[1];
+            if (param[0] in aExtraParams)
+              throw new TypeError('reserved URL parameter found');
+          }
+          for (var kv in Iterator(aExtraParams))
+            params.push(kv);
+        }
+        var paramsStr = params.map(function(i) {
+          return encodeURIComponent(i[0]) + '=' + encodeURIComponent(i[1]);
+        }).join('&');
+
+        // Now it's time to make our request!
+        var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
+        xhr.open('POST', this.baseUrl + '?' + paramsStr, true);
+        setAuthHeader(xhr, this._username, this._password);
+        xhr.setRequestHeader('MS-ASProtocolVersion', this.currentVersion);
+        xhr.setRequestHeader('Content-Type', aContentType);
+        xhr.setRequestHeader('User-Agent', USER_AGENT);
+
+        // Add extra headers if we have any.
+        if (aExtraHeaders) {
+          for (var iter in Iterator(aExtraHeaders)) {
+            var key = iter[0], value = iter[1];
+            xhr.setRequestHeader(key, value);
+          }
         }
 
-        var response = null;
-        if (xhr.response.byteLength > 0)
-          response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-        if (conn.onmessage)
-          conn.onmessage(aCommand, 'ok', xhr, params, aExtraHeaders,
-                         aData, response);
-        aCallback(null, response);
-      };
+        xhr.timeout = this.timeout;
 
-      xhr.ontimeout = xhr.onerror = function(evt) {
-        var error = new Error('Command URL ' + evt.type + ' for command ' +
-                              aCommand + ' at baseUrl ' + this.baseUrl);
-        console.error(error);
-        if (conn.onmessage)
-          conn.onmessage(aCommand, evt.type, xhr, params, aExtraHeaders,
-                         aData, null);
-        aCallback(error);
-      }.bind(this);
+        xhr.upload.onprogress = xhr.upload.onload = function() {
+          xhr.timeout = 0;
+        };
+        xhr.onprogress = function(event) {
+          if (aProgressCallback)
+            aProgressCallback(event.loaded, event.total);
+        };
 
-      xhr.responseType = 'arraybuffer';
-      xhr.send(aData);
+        var conn = this;
+
+        xhr.onload = function() {
+          // This status code is a proprietary Microsoft extension used to
+          // indicate a redirect, not to be confused with the draft-standard
+          // "Unavailable For Legal Reasons" status. More info available here:
+          // <http://msdn.microsoft.com/en-us/library/gg651019.aspx>
+          if (xhr.status === 451) {
+            conn.baseUrl = xhr.getResponseHeader('X-MS-Location');
+            if (conn.onmessage)
+              conn.onmessage(aCommand, 'redirect', xhr, params, aExtraHeaders,
+                             aData, null);
+            resolve(conn.postData.apply(conn, parentArgs));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300) {
+            console.error('ActiveSync command ' + aCommand + ' failed with ' +
+                          'response ' + xhr.status);
+            if (conn.onmessage)
+              conn.onmessage(aCommand, 'error', xhr, params, aExtraHeaders,
+                             aData, null);
+            reject(new HttpError(xhr.statusText, xhr.status));
+            return;
+          }
+
+          var response = null;
+          if (xhr.response.byteLength > 0)
+            response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
+          if (conn.onmessage)
+            conn.onmessage(aCommand, 'ok', xhr, params, aExtraHeaders,
+                           aData, response);
+          resolve(response);
+        };
+
+        xhr.ontimeout = xhr.onerror = function(evt) {
+          var error = new Error('Command URL ' + evt.type + ' for command ' +
+                                aCommand + ' at baseUrl ' + this.baseUrl);
+          console.error(error);
+          if (conn.onmessage)
+            conn.onmessage(aCommand, evt.type, xhr, params, aExtraHeaders,
+                           aData, null);
+          reject(error);
+        }.bind(this);
+
+        xhr.responseType = 'arraybuffer';
+        xhr.send(aData);
+      });
     },
   };
 
