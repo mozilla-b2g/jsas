@@ -526,22 +526,25 @@
      * @param aCommand {WBXML.Writer|String|Number}
      *   The WBXML representing the command or a string/tag representing the
      *   command type for empty commands
-     * @param aExtraParams (optional) an object containing any extra URL
-     *        parameters that should be added to the end of the request URL
-     * @param aExtraHeaders (optional) an object containing any extra HTTP
-     *        headers to send in the request
-     * @param aProgressCallback (optional) a callback to invoke with progress
-     *        information, when available. Two arguments are provided: the
-     *        number of bytes received so far, and the total number of bytes
-     *        expected (when known, 0 if unknown).
+     * @param {Object} [aOpts]
+     * @param {Object} [aOpts.extraParams]
+     *   An object containing any extra URL parameters that should be added to
+     *   the end of the request URL.
+     * @param {Object} [aOpts.extraHeaders]
+     *   An object containing any extra HTTP headers to send in the request.
+     * @param {Function(loaded, total)} [aOpts.downloadProgress]
+     *   A progress function to be invoked as "progress" events are fired on the
+     *   XHR instance.  Note that total may be 0 if the total number of bytes
+     *   expected is not known.
+     * @param {Function(loaded, total)} [aOpts.uploadProgress]
+     *   A progress function to be invoked as "progress" events are fired on the
+     *   XHR upload instance.
      */
-    postCommand: function(aCommand, aExtraParams, aExtraHeaders,
-                          aProgressCallback) {
+    postCommand: function(aCommand, aOpts) {
       var contentType = 'application/vnd.ms-sync.wbxml';
 
       if (typeof aCommand === 'string' || typeof aCommand === 'number') {
-        return this.postData(aCommand, contentType, null, aExtraParams,
-                             aExtraHeaders);
+        return this.postData(aCommand, contentType, null, aOpts);
       }
       // WBXML.Writer
       else {
@@ -549,7 +552,7 @@
         return this.postData(
           commandName, contentType,
           aCommand.dataType === 'blob' ? aCommand.blob : aCommand.buffer,
-          aExtraParams, aExtraHeaders, aProgressCallback);
+          aOpts);
       }
     },
 
@@ -559,26 +562,31 @@
      * @param aCommand a string (or WBXML tag) representing the command type
      * @param aContentType the content type of the post data
      * @param aData {ArrayBuffer|Blob} the data to be posted
-     * @param aCallback a callback to call when the server has responded; takes
-     *        two arguments: an error status (if any) and the response as a
-     *        WBXML reader. If the server returned an empty response, the
-     *        response argument is null.
      * @param aExtraParams (optional) an object containing any extra URL
      *        parameters that should be added to the end of the request URL
      * @param aExtraHeaders (optional) an object containing any extra HTTP
      *        headers to send in the request
-     * @param aProgressCallback (optional) a callback to invoke with progress
-     *        information, when available. Two arguments are provided: the
-     *        number of bytes received so far, and the total number of bytes
-     *        expected (when known, 0 if unknown).
+     * @param {Object} [aOpts]
+     * @param {Object} [aOpts.extraParams]
+     *   An object containing any extra URL parameters that should be added to
+     *   the end of the request URL.
+     * @param {Object} [aOpts.extraHeaders]
+     *   An object containing any extra HTTP headers to send in the request.
+     * @param {Function(loaded, total)} [aOpts.downloadProgress]
+     *   A progress function to be invoked as "progress" events are fired on the
+     *   XHR instance.  Note that total may be 0 if the total number of bytes
+     *   expected is not known.
+     * @param {Function(loaded, total)} [aOpts.uploadProgress]
+     *   A progress function to be invoked as "progress" events are fired on the
+     *   XHR upload instance.
      */
-    postData: function(aCommand, aContentType, aData, aExtraParams,
-                       aExtraHeaders, aProgressCallback) {
+    postData: function(aCommand, aContentType, aData, aOpts) {
       var parentArgs = arguments;
       return new Promise((resolve, reject) => {
         // Make sure our command name is a string.
-        if (typeof aCommand === 'number')
+        if (typeof aCommand === 'number') {
           aCommand = ASCP.__tagnames__[aCommand];
+        }
 
         if (!this.supportsCommand(aCommand)) {
           var error = new Error("This server doesn't support the command " +
@@ -595,14 +603,15 @@
           ['DeviceId', this._deviceId],
           ['DeviceType', this._deviceType]
         ];
-        if (aExtraParams) {
-          for (var iter in Iterator(params)) {
-            var param = iter[1];
-            if (param[0] in aExtraParams)
+        if (aOpts && aOpts.extraParams) {
+          for (let [paramName] of params) {
+            if (paramName in aOpts.extraParams) {
               throw new TypeError('reserved URL parameter found');
+            }
           }
-          for (var kv in Iterator(aExtraParams))
-            params.push(kv);
+          for (let paramName in aOpts.extraParams) {
+            params.push([paramName, aOpts.extraParams[paramName]]);
+          }
         }
         var paramsStr = params.map(function(i) {
           return encodeURIComponent(i[0]) + '=' + encodeURIComponent(i[1]);
@@ -617,21 +626,31 @@
         xhr.setRequestHeader('User-Agent', USER_AGENT);
 
         // Add extra headers if we have any.
-        if (aExtraHeaders) {
-          for (var iter in Iterator(aExtraHeaders)) {
-            var key = iter[0], value = iter[1];
+        if (aOpts && aOpts.extraHeaders) {
+          for (let key in aOpts.extraHeaders) {
+            let value = aOpts.extraHeaders[key];
             xhr.setRequestHeader(key, value);
           }
         }
 
         xhr.timeout = this.timeout;
 
-        xhr.upload.onprogress = xhr.upload.onload = function() {
+        var downloadProgress = aOpts && aOpts.downloadProgress;
+        var uploadProgress = aOpts && aOpts.uploadProgerss;
+
+        xhr.upload.onprogress = function(event) {
+          xhr.timeout = 0;
+          if (uploadProgress) {
+            uploadProgress(event.loaded, event.total);
+          }
+        };
+        xhr.upload.onload = function() {
           xhr.timeout = 0;
         };
         xhr.onprogress = function(event) {
-          if (aProgressCallback)
-            aProgressCallback(event.loaded, event.total);
+          if (downloadProgress) {
+            downloadProgress(event.loaded, event.total);
+          }
         };
 
         var conn = this;
@@ -643,9 +662,11 @@
           // <http://msdn.microsoft.com/en-us/library/gg651019.aspx>
           if (xhr.status === 451) {
             conn.baseUrl = xhr.getResponseHeader('X-MS-Location');
-            if (conn.onmessage)
-              conn.onmessage(aCommand, 'redirect', xhr, params, aExtraHeaders,
-                             aData, null);
+            if (conn.onmessage) {
+              conn.onmessage(
+                aCommand, 'redirect', xhr, params, aOpts && aOpts.extraHeaders,
+                aData, null);
+            }
             resolve(conn.postData.apply(conn, parentArgs));
             return;
           }
@@ -653,30 +674,37 @@
           if (xhr.status < 200 || xhr.status >= 300) {
             console.error('ActiveSync command ' + aCommand + ' failed with ' +
                           'response ' + xhr.status);
-            if (conn.onmessage)
-              conn.onmessage(aCommand, 'error', xhr, params, aExtraHeaders,
-                             aData, null);
+            if (conn.onmessage) {
+              conn.onmessage(
+                aCommand, 'error', xhr, params, aOpts && aOpts.extraHeaders,
+                aData, null);
+            }
             reject(new HttpError(xhr.statusText, xhr.status));
             return;
           }
 
           var response = null;
-          if (xhr.response.byteLength > 0)
+          if (xhr.response.byteLength > 0) {
             response = new WBXML.Reader(new Uint8Array(xhr.response), ASCP);
-          if (conn.onmessage)
-            conn.onmessage(aCommand, 'ok', xhr, params, aExtraHeaders,
-                           aData, response);
+          }
+          if (conn.onmessage) {
+            conn.onmessage(
+              aCommand, 'ok', xhr, params, aOpts && aOpts.extraHeaders,
+              aData, response);
+          }
           resolve(response);
         };
 
         xhr.ontimeout = xhr.onerror = function(evt) {
-          var error = new Error('Command URL ' + evt.type + ' for command ' +
+          var errObj = new Error('Command URL ' + evt.type + ' for command ' +
                                 aCommand + ' at baseUrl ' + this.baseUrl);
-          console.error(error);
-          if (conn.onmessage)
-            conn.onmessage(aCommand, evt.type, xhr, params, aExtraHeaders,
-                           aData, null);
-          reject(error);
+          console.error(errObj);
+          if (conn.onmessage) {
+            conn.onmessage(
+              aCommand, evt.type, xhr, params, aOpts && aOpts.extraHeaders,
+              aData, null);
+          }
+          reject(errObj);
         }.bind(this);
 
         xhr.responseType = 'arraybuffer';
