@@ -41,8 +41,10 @@ function assert_throws(f, type) {
   try {
     f();
   }
-  catch (e if !type || e instanceof type) {
-    threw = true;
+  catch (e) {
+    if (!type || e instanceof type) {
+      threw = true;
+    }
   }
   if (!threw)
     throw new Error('exception expected, but not found');
@@ -73,6 +75,7 @@ function assert_attr_equals(a, b, reason) {
 /**
  * Zip some iterators together to walk through them in lock-step.
  */
+ /* XXX this iteration protocol is dead
 function zip() {
   while (true) {
     let ends = 0;
@@ -92,10 +95,12 @@ function zip() {
     yield step;
   }
 }
-
+*/
+/* XXX comprehensions aren't a thing right now
 function iter_values(obj) {
   return (val for ( [key, val] in Iterator(obj || []) ));
 }
+*/
 
 function verify_node(actual, expected) {
   assert_equals(actual.type, expected.type);
