@@ -13,19 +13,7 @@
  * limitations under the License.
  */
 
-(function (root, factory) {
-  if (typeof exports === 'object') {
-    define = function(deps, factory) {
-      deps = deps.map.forEach(function(id) {
-        return require(id);
-      });
-      module.exports = factory(deps);
-    };
-    define.amd = {};
-  }
-
-  if (typeof define === 'function' && define.amd) {
-    define([
+define([
       'wbxml',
       './codepages/Common',
       './codepages/AirSync',
@@ -52,36 +40,7 @@
       './codepages/Email2',
       './codepages/Notes',
       './codepages/RightsManagement'
-    ], factory);
-  } else {
-    root.ActiveSyncCodepages = factory(WBXML,
-                                       ASCPCommon,
-                                       ASCPAirSync,
-                                       ASCPContacts,
-                                       ASCPEmail,
-                                       ASCPCalendar,
-                                       ASCPMove,
-                                       ASCPItemEstimate,
-                                       ASCPHierarchy,
-                                       ASCPMeetingResponse,
-                                       ASCPTasks,
-                                       ASCPResolveRecipients,
-                                       ASCPValidateCert,
-                                       ASCPContacts2,
-                                       ASCPPing,
-                                       ASCPProvision,
-                                       ASCPSearch,
-                                       ASCPGAL,
-                                       ASCPAirSyncBase,
-                                       ASCPSettings,
-                                       ASCPDocumentLibrary,
-                                       ASCPItemOperations,
-                                       ASCPComposeMail,
-                                       ASCPEmail2,
-                                       ASCPNotes,
-                                       ASCPRightsManagement);
-  }
-}(this, function(WBXML, Common, AirSync, Contacts, Email, Calendar, Move,
+    ], function(WBXML, Common, AirSync, Contacts, Email, Calendar, Move,
                  ItemEstimate, FolderHierarchy, MeetingResponse, Tasks,
                  ResolveRecipients, ValidateCert, Contacts2, Ping, Provision,
                  Search, GAL, AirSyncBase, Settings, DocumentLibrary,
@@ -119,4 +78,4 @@
   WBXML.CompileCodepages(codepages);
 
   return codepages;
-}));
+});
