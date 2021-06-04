@@ -84,7 +84,7 @@ function makeSync(calendarFolderId, syncKey) {
 
 function getElementData(node) {
   let data = {};
-  for (let [,child] in Iterator(node.children)) {
+  for (const child of node.children) {
     data[child.localTagName] = child.children[0].textContent;
   }
   return data;

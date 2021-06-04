@@ -333,8 +333,7 @@
       if (aError)
         this.disconnect();
 
-      for (var iter in Iterator(this._connectionCallbacks)) {
-        var callback = iter[1];
+      for (const callback of this._connectionCallbacks) {
         callback.apply(callback, arguments);
       }
       this._connectionCallbacks = [];
